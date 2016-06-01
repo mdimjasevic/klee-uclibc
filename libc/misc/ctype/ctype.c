@@ -37,7 +37,7 @@
 #include <locale.h>
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_b_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 #endif
 
@@ -149,6 +149,7 @@ CTYPE_ALIAS(NAME)
 
 #define C_MACRO(X)		PASTE2(__C_is,X)(c)
 #define CTYPE_NAME(X)  is ## X
+#define CTYPE_DEF(NAME) libc_hidden_def(is ## NAME)
 
 #define IS_FUNC_BODY(NAME) \
 int CTYPE_NAME(NAME) (int c) \
@@ -278,7 +279,7 @@ IS_FUNC_BODY(xdigit);
 #undef tolower
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_tolower_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_tolower)
 #endif
 libc_hidden_proto(tolower)
@@ -316,6 +317,7 @@ int tolower_l(int c, __locale_t l)
 	return __UCLIBC_CTYPE_IN_TO_DOMAIN(c) ? l->__ctype_tolower[c] : c;
 }
 libc_hidden_def(tolower_l)
+weak_alias (tolower_l, __tolower_l)
 
 #endif
 /**********************************************************************/
@@ -324,7 +326,7 @@ libc_hidden_def(tolower_l)
 #undef toupper
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_toupper_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_toupper)
 #endif
 libc_hidden_proto(toupper)
@@ -362,6 +364,7 @@ int toupper_l(int c, __locale_t l)
 	return __UCLIBC_CTYPE_IN_TO_DOMAIN(c) ? l->__ctype_toupper[c] : c;
 }
 libc_hidden_def(toupper_l)
+weak_alias (toupper_l, __toupper_l)
 
 #endif
 /**********************************************************************/
@@ -597,7 +600,7 @@ const __ctype_mask_t __C_ctype_b_data[] = {
 	/*   -4  M-|  */ 0,
 	/*   -3  M-}  */ 0,
 	/*   -2  M-~  */ 0,
-#endif /* __UCLIBC_HAS_CTYPE_SIGNED__*/ 
+#endif /* __UCLIBC_HAS_CTYPE_SIGNED__*/
 	/*   -1  M-^? */ 0,
 	/*    0  ^@   */ _IScntrl,
 	/*    1  ^A   */ _IScntrl,
@@ -909,7 +912,7 @@ const __ctype_touplow_t __C_ctype_tolower_data[] = {
 	 -12,          -11,          -10,           -9,
 	  -8,           -7,           -6,           -5,
 	  -4,           -3,           -2,           -1,
-#endif /* __UCLIBC_HAS_CTYPE_SIGNED__*/ 
+#endif /* __UCLIBC_HAS_CTYPE_SIGNED__*/
 	   0,            1,            2,            3,
 	   4,            5,            6,            7,
 	   8,            9,           10,           11,
@@ -1031,7 +1034,7 @@ const __ctype_touplow_t __C_ctype_toupper_data[] = {
 	 -12,          -11,          -10,           -9,
 	  -8,           -7,           -6,           -5,
 	  -4,           -3,           -2,           -1,
-#endif /* __UCLIBC_HAS_CTYPE_SIGNED__*/ 
+#endif /* __UCLIBC_HAS_CTYPE_SIGNED__*/
 	   0,            1,            2,            3,
 	   4,            5,            6,            7,
 	   8,            9,           10,           11,

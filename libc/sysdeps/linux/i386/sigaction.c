@@ -14,7 +14,7 @@
    You should have received a copy of the GNU Library General Public
    License along with the GNU C Library; see the file COPYING.LIB.  If not,
    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.  
+   Boston, MA 02111-1307, USA.
 
    Totally hacked up for uClibc by Erik Andersen <andersen@codepoet.org>
    */
@@ -30,7 +30,7 @@
 extern __typeof(sigaction) __libc_sigaction;
 
 #if defined __NR_rt_sigaction
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 
 extern void restore_rt (void) __asm__ ("__restore_rt") attribute_hidden;
 extern void restore (void) __asm__ ("__restore") attribute_hidden;
@@ -99,11 +99,11 @@ int __libc_sigaction (int sig, const struct sigaction *act, struct sigaction *oa
     }
 
     __asm__ __volatile__ ("pushl %%ebx\n"
-	    "movl %2, %%ebx\n"
+	    "movl %3, %%ebx\n"
 	    "int $0x80\n"
 	    "popl %%ebx"
-	    : "=a" (result)
-	    : "0" (__NR_sigaction), "mr" (sig),
+	    : "=a" (result), "=m" (koact)
+	    : "0" (__NR_sigaction), "r" (sig), "m" (kact),
 	    "c" (act ? __ptrvalue (&kact) : 0),
 	    "d" (oact ? __ptrvalue (&koact) : 0));
 
@@ -145,7 +145,6 @@ libc_hidden_weak(sigaction)
 __asm__						\
   (						\
    ".text\n"					\
-   "	.align 16\n"				\
    "__" #name ":\n"				\
    "	movl $" #syscall ", %eax\n"		\
    "	int  $0x80"				\
@@ -163,7 +162,6 @@ RESTORE (restore_rt, __NR_rt_sigreturn)
 __asm__						\
   (						\
    ".text\n"					\
-   "	.align 8\n"				\
    "__" #name ":\n"				\
    "	popl %eax\n"				\
    "	movl $" #syscall ", %eax\n"		\

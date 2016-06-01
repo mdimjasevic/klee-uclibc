@@ -12,8 +12,8 @@
 #include <sys/syscall.h>
 
 #define __NR___syscall_sched_rr_get_interval __NR_sched_rr_get_interval
-static inline _syscall2(int, __syscall_sched_rr_get_interval,
-		__kernel_pid_t, pid, struct timespec *, tp);
+static __inline__ _syscall2(int, __syscall_sched_rr_get_interval,
+		__kernel_pid_t, pid, struct timespec *, tp)
 
 int sched_rr_get_interval(pid_t pid, struct timespec *tp)
 {

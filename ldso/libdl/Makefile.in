@@ -1,6 +1,6 @@
 # Makefile.in for uClibc
 #
-# Copyright (C) 2000-2006 Erik Andersen <andersen@uclibc.org>
+# Copyright (C) 2000-2008 Erik Andersen <andersen@uclibc.org>
 #
 # Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
 #
@@ -17,7 +17,7 @@ endif
 
 CFLAGS-libdl.c := -DLDSO_ELFINTERP=\"$(TARGET_ARCH)/elfinterp.c\"
 
-LDFLAGS-libdl.so := $(LDFLAGS) -fini dl_cleanup
+LDFLAGS-libdl.so := $(LDFLAGS) -Wl,-fini,dl_cleanup
 
 LIBS-libdl.so := $(LIBS) $(ldso)
 
@@ -41,19 +41,17 @@ lib-a-$(HAVE_SHARED) += $(top_builddir)lib/libdl.a
 lib-so-y += $(top_builddir)lib/libdl.so
 objclean-y += libdl_clean
 
-$(top_builddir)lib/libdl.so: $(libdl_OUT)/libdl_so.a $(libc)
+$(top_builddir)lib/libdl.so: $(libdl_OUT)/libdl_so.a $(libc.depend)
 	$(call link.so,$(libdl_FULL_NAME),$(MAJOR_VERSION))
 
 $(libdl_OUT)/libdl_so.a: $(libdl-so-y)
 	$(Q)$(RM) $@
-	$(do_strip)
 	$(do_ar)
 
 $(top_builddir)lib/libdl.a: $(libdl-a-y)
 	$(Q)$(INSTALL) -d $(dir $@)
 	$(Q)$(RM) $@
-	$(do_strip)
 	$(do_ar)
 
 libdl_clean:
-	$(RM) $(libdl_OUT)/*.{o,os,a,oS}
+	$(do_rm) $(addprefix $(libdl_OUT)/*., o os oS a)

@@ -51,12 +51,6 @@ struct funcdesc_value
 
 extern int _dl_linux_resolve(void) __attribute__((__visibility__("hidden")));
 
-/* 16KiB page alignment.  Should perhaps be made dynamic using
-   getpagesize(), based on AT_PAGESZ from auxvt?  */
-#define PAGE_ALIGN 0xffffc000
-#define ADDR_ALIGN 0x3fff
-#define OFFS_ALIGN 0x7fffc000
-
 struct funcdesc_ht;
 
 /* We must force strings used early in the bootstrap into the data
@@ -76,7 +70,7 @@ struct funcdesc_ht;
   ((void(*)(void)) _dl_funcdesc_for ((void*)(ADDR), (LOADADDR).got_value))
 
 #define _dl_stabilize_funcdesc(val) \
-  ({ asm ("" : "+m" (*(val))); (val); })
+  ({ __asm__ ("" : "+m" (*(val))); (val); })
 
 #define DL_CALL_FUNC_AT_ADDR(ADDR, LOADADDR, SIGNATURE, ...) \
   ({ struct funcdesc_value fd = { (void*)(ADDR), (LOADADDR).got_value }; \
@@ -152,7 +146,7 @@ do \
       _dl_close(infile); \
     } \
 } \
-while (0)  
+while (0)
 
 /* We want want to apply all relocations in the interpreter during
    bootstrap.  Because of this, we have to skip the interpreter
@@ -179,7 +173,7 @@ while (0)
 #define DL_GET_READY_TO_RUN_EXTRA_ARGS \
   , dl_boot_progmap
 
-	  
+
 
 
 #ifdef __USE_GNU

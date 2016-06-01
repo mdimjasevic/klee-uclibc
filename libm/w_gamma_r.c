@@ -23,6 +23,7 @@ static char rcsid[] = "$NetBSD: w_gamma_r.c,v 1.7 1995/11/20 22:06:45 jtc Exp $"
 
 
 double gamma_r(double x, int *signgamp);
+libm_hidden_proto(gamma_r)
 #ifdef __STDC__
 	double gamma_r(double x, int *signgamp) /* wrapper lgamma_r */
 #else
@@ -36,7 +37,7 @@ double gamma_r(double x, int *signgamp);
         double y;
         y = __ieee754_lgamma_r(x,signgamp);
         if(_LIB_VERSION == _IEEE_) return y;
-        if(!finite(y)&&finite(x)) {
+        if(!isfinite(y)&&isfinite(x)) {
             if(floor(x)==x&&x<=0.0)
                 return __kernel_standard(x,x,41); /* gamma pole */
             else
@@ -45,3 +46,4 @@ double gamma_r(double x, int *signgamp);
             return y;
 #endif
 }
+libm_hidden_def(gamma_r)

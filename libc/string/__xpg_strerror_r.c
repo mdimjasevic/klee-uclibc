@@ -6,7 +6,7 @@
  */
 
 /* Make sure we get proper strerror_r() prototype */
-#define strerror_r __moo
+#define strerror_r _hidestrerror_r
 
 #include <features.h>
 #include <errno.h>
@@ -16,8 +16,8 @@
 #undef strerror_r
 
 libc_hidden_proto(__xpg_strerror_r)
-libc_hidden_proto(memcpy)
-libc_hidden_proto(strlen)
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(strlen) */
 
 #ifdef __UCLIBC_HAS_ERRNO_MESSAGES__
 
@@ -149,7 +149,7 @@ static const unsigned char estridx[] = {
 	EISNAM,
 	EREMOTEIO,
 #if EDQUOT > 200			/* mips has an outrageous value for this... */
-	0,							
+	0,
 #else
 	EDQUOT,
 #endif

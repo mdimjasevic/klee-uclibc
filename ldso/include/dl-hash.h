@@ -34,21 +34,45 @@ struct elf_resolve {
   struct elf_resolve * next;
   struct elf_resolve * prev;
   /* Nothing after this address is used by gdb. */
-  DL_LOADADDR_TYPE mapaddr;    /* Address at which ELF segments (either main app and DSO) are mapped into */
+  ElfW(Addr) mapaddr;    /* Address at which ELF segments (either main app and DSO) are mapped into */
   enum {elf_lib, elf_executable,program_interpreter, loaded_file} libtype;
   struct dyn_elf * symbol_scope;
   unsigned short usage_count;
   unsigned short int init_flag;
   unsigned long rtld_flags; /* RTLD_GLOBAL, RTLD_NOW etc. */
   Elf_Symndx nbucket;
+
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+  /* Data needed to support GNU hash style */
+  Elf32_Word l_gnu_bitmask_idxbits;
+  Elf32_Word l_gnu_shift;
+  const ElfW(Addr) *l_gnu_bitmask;
+
+  union
+  {
+    const Elf32_Word *l_gnu_chain_zero;
+    const Elf_Symndx *elf_buckets;
+  };
+#else
   Elf_Symndx *elf_buckets;
+#endif
+
   struct init_fini_list *init_fini;
   struct init_fini_list *rtld_local; /* keep tack of RTLD_LOCAL libs in same group */
   /*
    * These are only used with ELF style shared libraries
    */
   Elf_Symndx nchain;
+
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+  union
+  {
+    const Elf32_Word *l_gnu_buckets;
+    const Elf_Symndx *chains;
+  };
+#else
   Elf_Symndx *chains;
+#endif
   unsigned long dynamic_info[DYNAMIC_SIZE];
 
   unsigned long n_phent;
@@ -65,6 +89,13 @@ struct elf_resolve {
    * we don't have to calculate it every time, which requires a divide */
   unsigned long data_words;
 #endif
+
+#ifdef __FDPIC__
+  /* Every loaded module holds a hashtable of function descriptors of
+     functions defined in it, such that it's easy to release the
+     memory when the module is dlclose()d.  */
+  struct funcdesc_ht *funcdesc_ht;
+#endif
 };
 
 #define RELOCS_DONE	    0x000001
@@ -75,21 +106,35 @@ struct elf_resolve {
 
 extern struct dyn_elf     * _dl_symbol_tables;
 extern struct elf_resolve * _dl_loaded_modules;
-extern struct dyn_elf 	  * _dl_handles;
+extern struct dyn_elf     * _dl_handles;
 
 extern struct elf_resolve * _dl_add_elf_hash_table(const char * libname,
 	DL_LOADADDR_TYPE loadaddr, unsigned long * dynamic_info,
 	unsigned long dynamic_addr, unsigned long dynamic_size);
 
-extern char * _dl_find_hash(const char * name, struct dyn_elf * rpnt1,
-			    struct elf_resolve *mytpnt, int type_class);
+extern char * _dl_lookup_hash(const char * name, struct dyn_elf * rpnt,
+			      struct elf_resolve *mytpnt, int type_class
+#ifdef __FDPIC__
+			      , struct elf_resolve **tpntp
+#endif
+			      );
+
+static __always_inline char *_dl_find_hash(const char *name, struct dyn_elf *rpnt,
+					   struct elf_resolve *mytpnt, int type_class)
+{
+#ifdef __FDPIC__
+	return _dl_lookup_hash(name, rpnt, mytpnt, type_class, NULL);
+#else
+	return _dl_lookup_hash(name, rpnt, mytpnt, type_class);
+#endif
+}
 
 extern int _dl_linux_dynamic_link(void);
 
 extern char * _dl_library_path;
 extern char * _dl_not_lazy;
 
-static inline int _dl_symbol(char * name)
+static __inline__ int _dl_symbol(char * name)
 {
   if (name[0] != '_' || name[1] != 'd' || name[2] != 'l' || name[3] != '_')
     return 0;

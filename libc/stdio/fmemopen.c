@@ -10,7 +10,7 @@
 #ifdef __USE_GNU
 #include "_stdio.h"
 
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 libc_hidden_proto(fopencookie)
 
 #ifndef __UCLIBC_HAS_GLIBC_CUSTOM_STREAMS__
@@ -142,7 +142,7 @@ FILE *fmemopen(void *s, size_t len, const char *modes)
 			cookie->dynbuf = 1;
 			*cookie->buf = 0;	/* If we're appending, treat as empty file. */
 		}
-		
+
 #ifndef __BCC__
 		fp = fopencookie(cookie, modes, _fmo_io_funcs);
 #else

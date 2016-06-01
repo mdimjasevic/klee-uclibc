@@ -44,11 +44,11 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-libc_hidden_proto(memcpy)
-libc_hidden_proto(memset)
-libc_hidden_proto(strchr)
-libc_hidden_proto(strcmp)
-libc_hidden_proto(strlen)
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(memset) */
+/* Experimentally off - libc_hidden_proto(strchr) */
+/* Experimentally off - libc_hidden_proto(strcmp) */
+/* Experimentally off - libc_hidden_proto(strlen) */
 libc_hidden_proto(fopen)
 libc_hidden_proto(fclose)
 libc_hidden_proto(atoi)
@@ -93,10 +93,8 @@ void endrpcent(void)
 		return;
 	if (d->stayopen)
 		return;
-	if (d->current) {
-		free(d->current);
-		d->current = NULL;
-	}
+	free(d->current);
+	d->current = NULL;
 	if (d->rpcf) {
 		fclose(d->rpcf);
 		d->rpcf = NULL;
@@ -115,8 +113,7 @@ void setrpcent(int f)
 		d->rpcf = fopen(RPCDB, "r");
 	else
 		rewind(d->rpcf);
-	if (d->current)
-		free(d->current);
+	free(d->current);
 	d->current = NULL;
 	d->stayopen |= f;
 }

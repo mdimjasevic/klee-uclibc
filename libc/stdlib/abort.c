@@ -19,7 +19,6 @@ Cambridge, MA 02139, USA.  */
 /* Hacked up for uClibc by Erik Andersen */
 
 #include <features.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +28,7 @@ Cambridge, MA 02139, USA.  */
 
 libc_hidden_proto(abort)
 
-libc_hidden_proto(memset)
+/* Experimentally off - libc_hidden_proto(memset) */
 libc_hidden_proto(sigaction)
 libc_hidden_proto(sigprocmask)
 libc_hidden_proto(raise)
@@ -46,7 +45,7 @@ libc_hidden_proto(_exit)
 #ifdef __UCLIBC_HAS_STDIO_SHUTDOWN_ON_ABORT__
 extern void weak_function _stdio_term(void) attribute_hidden;
 #endif
-static int been_there_done_that = 0;
+static smallint been_there_done_that = 0;
 
 /* Be prepared in case multiple threads try to abort() */
 #include <bits/uClibc_mutex.h>

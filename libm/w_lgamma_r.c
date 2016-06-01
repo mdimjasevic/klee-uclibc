@@ -21,7 +21,6 @@ static char rcsid[] = "$NetBSD: w_lgamma_r.c,v 1.6 1995/05/10 20:49:27 jtc Exp $
 #include "math.h"
 #include "math_private.h"
 
-
 #ifdef __STDC__
 	double lgamma_r(double x, int *signgamp) /* wrapper lgamma_r */
 #else
@@ -35,7 +34,7 @@ static char rcsid[] = "$NetBSD: w_lgamma_r.c,v 1.6 1995/05/10 20:49:27 jtc Exp $
         double y;
         y = __ieee754_lgamma_r(x,signgamp);
         if(_LIB_VERSION == _IEEE_) return y;
-        if(!finite(y)&&finite(x)) {
+        if(!isfinite(y)&&isfinite(x)) {
             if(floor(x)==x&&x<=0.0)
                 return __kernel_standard(x,x,15); /* lgamma pole */
             else

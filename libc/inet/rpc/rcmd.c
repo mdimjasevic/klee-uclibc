@@ -53,7 +53,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- */ 
+ */
 
 #if 0
 static char sccsid[] = "@(#)rcmd.c	8.3 (Berkeley) 3/26/94";
@@ -87,14 +87,14 @@ static char sccsid[] = "@(#)rcmd.c	8.3 (Berkeley) 3/26/94";
 #endif
 #include <sys/uio.h>
 
-libc_hidden_proto(memcmp)
-libc_hidden_proto(strcat)
-libc_hidden_proto(strchr)
-libc_hidden_proto(strcmp)
-libc_hidden_proto(strcpy)
-libc_hidden_proto(strlen)
-libc_hidden_proto(strncmp)
-libc_hidden_proto(memmove)
+/* Experimentally off - libc_hidden_proto(memcmp) */
+/* Experimentally off - libc_hidden_proto(strcat) */
+/* Experimentally off - libc_hidden_proto(strchr) */
+/* Experimentally off - libc_hidden_proto(strcmp) */
+/* Experimentally off - libc_hidden_proto(strcpy) */
+/* Experimentally off - libc_hidden_proto(strlen) */
+/* Experimentally off - libc_hidden_proto(strncmp) */
+/* Experimentally off - libc_hidden_proto(memmove) */
 libc_hidden_proto(getpid)
 libc_hidden_proto(socket)
 libc_hidden_proto(close)
@@ -134,7 +134,7 @@ libc_hidden_proto(__h_errno_location)
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_b_loc)
 libc_hidden_proto(__ctype_tolower_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 libc_hidden_proto(__ctype_tolower)
 #endif
@@ -144,7 +144,7 @@ libc_hidden_proto(rresvport)
 /* some forward declarations */
 static int __ivaliduser2(FILE *hostf, u_int32_t raddr,
 			 const char *luser, const char *ruser, const char *rhost);
-static int iruserok2 (u_int32_t raddr, int superuser, const char *ruser, 
+static int iruserok2 (u_int32_t raddr, int superuser, const char *ruser,
 		      const char *luser, const char *rhost);
 
 
@@ -178,7 +178,7 @@ int rcmd(ahost, rport, locuser, remuser, cmd, fd2p)
 	tmphstbuf = malloc (hstbuflen);
 #endif
 
-	while (gethostbyname_r (*ahost, &hostbuf, tmphstbuf, 
+	while (gethostbyname_r (*ahost, &hostbuf, tmphstbuf,
 		    hstbuflen, &hp, &herr) != 0 || hp == NULL)
 	{
 	    if (herr != NETDB_INTERNAL || errno != ERANGE)
@@ -197,9 +197,7 @@ int rcmd(ahost, rport, locuser, remuser, cmd, fd2p)
 #ifdef __ARCH_USE_MMU__
 		tmphstbuf = alloca (hstbuflen);
 #else
-		if (tmphstbuf) {
-		    free(tmphstbuf);
-		}
+		free(tmphstbuf);
 		tmphstbuf = malloc (hstbuflen);
 #endif
 	    }
@@ -214,7 +212,7 @@ int rcmd(ahost, rport, locuser, remuser, cmd, fd2p)
 #endif
 	pfd[0].events = POLLIN;
 	pfd[1].events = POLLIN;
-	
+
         *ahost = hp->h_name;
         oldmask = sigblock(sigmask(SIGURG)); /* __sigblock */
 	for (timo = 1, lport = IPPORT_RESERVED - 1;;) {
@@ -363,7 +361,7 @@ int rresvport(int *alport)
 	    return -1;
 	}
     }
-    
+
     return -1;
 }
 libc_hidden_def(rresvport)
@@ -396,8 +394,8 @@ int ruserok(rhost, superuser, ruser, luser)
 	buffer = malloc (buflen);
 #endif
 
-	while (gethostbyname_r (rhost, &hostbuf, buffer, 
-		    buflen, &hp, &herr) != 0 || hp == NULL) 
+	while (gethostbyname_r (rhost, &hostbuf, buffer,
+		    buflen, &hp, &herr) != 0 || hp == NULL)
 	{
 	    if (herr != NETDB_INTERNAL || errno != ERANGE) {
 #ifndef __ARCH_USE_MMU__
@@ -411,9 +409,7 @@ int ruserok(rhost, superuser, ruser, luser)
 #ifdef __ARCH_USE_MMU__
 		buffer = alloca (buflen);
 #else
-		if (buffer) {
-		    free(buffer);
-		}
+		free(buffer);
 		buffer = malloc (buflen);
 #endif
 	    }
@@ -497,7 +493,7 @@ iruserok2 (raddr, superuser, ruser, luser, rhost)
 
 	if (!superuser)
 		hostf = iruserfopen (_PATH_HEQUIV, 0);
-	
+
 	if (hostf) {
 		isbad = __ivaliduser2 (hostf, raddr, luser, ruser, rhost);
 		fclose (hostf);
@@ -521,7 +517,7 @@ iruserok2 (raddr, superuser, ruser, luser, rhost)
 		char *buffer = malloc (buflen);
 #endif
 
-		if (getpwnam_r (luser, &pwdbuf, buffer, 
+		if (getpwnam_r (luser, &pwdbuf, buffer,
 			    buflen, &pwd) != 0 || pwd == NULL)
 		{
 #ifndef __ARCH_USE_MMU__
@@ -549,12 +545,12 @@ iruserok2 (raddr, superuser, ruser, luser, rhost)
 		seteuid (pwd->pw_uid);
 		hostf = iruserfopen (pbuf, pwd->pw_uid);
 		free(pbuf);
-		
+
 		if (hostf != NULL) {
 			isbad = __ivaliduser2 (hostf, raddr, luser, ruser, rhost);
 			fclose (hostf);
 		}
-		
+
 		seteuid (uid);
 		return isbad;
 	}
@@ -780,8 +776,7 @@ __ivaliduser2(hostf, raddr, luser, ruser, rhost)
 	}
     }
 
-    if (buf != NULL)
-      free (buf);
+    free (buf);
 
     return retval;
 }

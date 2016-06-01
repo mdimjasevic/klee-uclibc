@@ -14,10 +14,9 @@
 libc_hidden_proto(utimes)
 
 #ifdef __NR_utimes
-_syscall2(int, utimes, const char *, file, const struct timeval *, tvp);
+_syscall2(int, utimes, const char *, file, const struct timeval *, tvp)
 #else
 #include <stdlib.h>
-#include <sys/time.h>
 
 libc_hidden_proto(utime)
 
@@ -35,4 +34,5 @@ int utimes(const char *file, const struct timeval tvp[2])
 	return utime(file, times);
 }
 #endif
+link_warning(utimes, "the use of LEGACY `utimes' is discouraged, use `utime'")
 libc_hidden_def(utimes)

@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #ifdef __UCLIBC_HAS_REGEX__
@@ -883,7 +884,7 @@ long int sysconf(int name)
 #endif
 
     case _SC_MONOTONIC_CLOCK:
-#ifdef __NR_clock_getres
+#if defined __UCLIBC_HAS_REALTIME__ && defined __NR_clock_getres
       /* Check using the clock_getres system call.  */
       if (clock_getres(CLOCK_MONOTONIC, NULL) >= 0)
         return _POSIX_VERSION;

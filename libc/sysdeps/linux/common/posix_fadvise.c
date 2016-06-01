@@ -33,8 +33,18 @@ int posix_fadvise(int fd, off_t offset, off_t len, int advice)
     return 0;
 }
 #else
-_syscall4(int, posix_fadvise, int, fd, off_t, offset,
-          off_t, len, int, advice);
+static __inline__ int syscall_posix_fadvise(int fd, off_t offset1, off_t offset2, off_t len, int advice);
+#define __NR_syscall_posix_fadvise __NR_fadvise64
+_syscall5(int, syscall_posix_fadvise, int, fd, off_t, offset1,
+          off_t, offset2, off_t, len, int, advice)
+
+int posix_fadvise(int fd, off_t offset, off_t len, int advice)
+{
+	int ret = syscall_posix_fadvise(fd, __LONG_LONG_PAIR (offset >> 31, offset), len, advice);
+	if (ret == -1)
+		return errno;
+	return ret;
+}
 
 #endif
 
@@ -46,6 +56,7 @@ strong_alias(posix_fadvise,posix_fadvise64)
 #else
 int posix_fadvise(int fd attribute_unused, off_t offset attribute_unused, off_t len attribute_unused, int advice attribute_unused)
 {
+#warning This is not correct as far as SUSv3 is concerned.
 	return ENOSYS;
 }
 #endif

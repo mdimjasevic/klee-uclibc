@@ -98,12 +98,35 @@ int main(int argc, char **argv)
 	int total_size = 0;
 
 	if (!setlocale(LC_CTYPE, "en_US.UTF-8")) {
-		printf("setlocale(LC_CTYPE,\"en_US.UTF-8\") failed!\n");
+		/* Silly foreigners disabling en_US locales */
+		FILE *fp = popen("locale -a", "r");
+		if (!fp)
+			goto locale_failure;
+
+		while (!feof(fp)) {
+			char buf[256];
+			size_t len;
+
+			if (fgets(buf, sizeof(buf) - 10, fp) == NULL)
+				goto locale_failure;
+
+			len = strlen(buf);
+			if (buf[len - 1] == '\n')
+				buf[--len] = '\0';
+			strcat(buf, ".UTF8");
+			if (setlocale(LC_CTYPE, buf))
+				goto locale_success;
+		}
+
+ locale_failure:
+		printf("could not find a UTF8 locale ... please enable en_US.UTF-8\n");
 		return EXIT_FAILURE;
+ locale_success:
+		pclose(fp);
 	}
 
 	if (!(out = fopen("c8tables.h","w"))) {
-		printf("error: couldn't open file \"c8tables.h\"\n");
+		printf("cannot open output file 'c8tables.h'!\n");
 		return EXIT_FAILURE;
 	}
 
@@ -173,7 +196,7 @@ int main(int argc, char **argv)
 	codeset_index[0] = 0;
 	while (--argc) {
 		if (!(fp = fopen(*++argv,"r"))) {
-			printf("error: couldn't open file \"%s\"\n", *argv);
+			printf("cannot open file \"%s\"\n", *argv);
 			return EXIT_FAILURE;
 		}
 		printf("processing %s... ", *argv);
@@ -182,14 +205,14 @@ int main(int argc, char **argv)
 			char *s0;
 			char *s1;
 			int n;
-			
+
 			s0 = strrchr(*argv, '/');
 			if (!s0) {
 				s0 = *argv;
 			} else {
 				++s0;
 			}
-			s1 = strchr(s0, '.');
+			s1 = strrchr(s0, '.');
 			if (!s1) {
 				n = strlen(s0);
 			} else {
@@ -219,8 +242,8 @@ int main(int argc, char **argv)
 			fprintf(out, "\t{ /* %.*s */", n, s0);
 		}
 
-		memset(&csd[numsets],sizeof(charset_data),0);
-		memset(xi, sizeof(xi), 0);
+		memset(&csd[numsets], 0, sizeof(charset_data));
+		memset(xi, 0, sizeof(xi));
 		{
 			unsigned long c, wc;
 			int lines;
@@ -379,7 +402,7 @@ int main(int argc, char **argv)
 				if ((c != 0) || 1) {
 					u = towupper(c);
 					l = towlower(c);
-					
+
 					if (u >= 0x80) u = csd[numsets].w2c[u];
 					if (l >= 0x80) l = csd[numsets].w2c[l];
 
@@ -464,7 +487,7 @@ int main(int argc, char **argv)
 #if 1
 				wrow[i & (C2WC_ROW_LEN-1)] = csd[numsets].c2w[i];
 				if ((i & (C2WC_ROW_LEN-1)) == (C2WC_ROW_LEN-1)) {
-					p = (char *) c2wc_tbl;
+					p = (unsigned char *) c2wc_tbl;
 					for (j=0 ; j < n_c2wc_rows ; j++) {
 						if (!memcmp(p, (char *) wrow, 2*C2WC_ROW_LEN)) {
 							break;
@@ -615,7 +638,7 @@ int main(int argc, char **argv)
 
 	fprintf(out, "\nstatic const unsigned short __LOCALE_DATA_Cc2wc_data[%d] = {\n",
 			n_c2wc_rows * C2WC_ROW_LEN);
-	p = (char *) c2wc_tbl;
+	p = (unsigned char *) c2wc_tbl;
 	for (j=0 ; j < n_c2wc_rows ; j++) {
 		fprintf(out, "\t");
 		for (i=0 ; i < C2WC_ROW_LEN ; i++) {

@@ -23,17 +23,13 @@
 #include <sys/types.h>
 #include <sys/syscall.h>
 
-#ifdef INTERNAL_SYSCALL /* remove this when all archs has this #defined */
-
 #include <string.h>
 #include <sys/param.h>
-#include <sys/types.h>
 
-libc_hidden_proto(memset)
-
+#if defined __NR_sched_getaffinity
 #define __NR___syscall_sched_getaffinity __NR_sched_getaffinity
-static inline _syscall3(int, __syscall_sched_getaffinity, __kernel_pid_t, pid,
-			size_t, cpusetsize, cpu_set_t *, cpuset);
+static __inline__ _syscall3(int, __syscall_sched_getaffinity, __kernel_pid_t, pid,
+			size_t, cpusetsize, cpu_set_t *, cpuset)
 
 int sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *cpuset)
 {
@@ -47,6 +43,12 @@ int sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *cpuset)
 		res = 0;
 	}
 	return res;
+}
+#elif defined __UCLIBC_HAS_STUBS__
+int sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *cpuset)
+{
+    __set_errno(ENOSYS);
+    return -1;
 }
 #endif
 #endif

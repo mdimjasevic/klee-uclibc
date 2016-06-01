@@ -23,12 +23,12 @@
 #include <unistd.h>
 #include <stdio.h>
 
-libc_hidden_proto(memcpy)
-libc_hidden_proto(strcat)
-libc_hidden_proto(strchr)
-libc_hidden_proto(strcmp)
-libc_hidden_proto(strcpy)
-libc_hidden_proto(strlen)
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(strcat) */
+/* Experimentally off - libc_hidden_proto(strchr) */
+/* Experimentally off - libc_hidden_proto(strcmp) */
+/* Experimentally off - libc_hidden_proto(strcpy) */
+/* Experimentally off - libc_hidden_proto(strlen) */
 libc_hidden_proto(opendir)
 libc_hidden_proto(closedir)
 libc_hidden_proto(qsort)
@@ -235,7 +235,7 @@ int glob(const char *pat, int flags, int (*errfunc)(const char *path, int err), 
 	size_t cnt, i;
 	size_t offs = (flags & GLOB_DOOFFS) ? g->gl_offs : 0;
 	int error = 0;
-	
+
 	if (*p == '/') {
 		for (; *p == '/'; p++);
 		d = "/";
@@ -256,7 +256,7 @@ int glob(const char *pat, int flags, int (*errfunc)(const char *path, int err), 
 		__glob_freelist(&head);
 		return error;
 	}
-	
+
 	for (cnt=0, tail=head.next; tail; tail=tail->next, cnt++);
 	if (!cnt) {
 		if (flags & GLOB_NOCHECK) {
@@ -292,7 +292,7 @@ int glob(const char *pat, int flags, int (*errfunc)(const char *path, int err), 
 
 	if (!(flags & GLOB_NOSORT))
 		qsort(g->gl_pathv+offs, cnt, sizeof(char *), __glob_sort);
-	
+
 	return error;
 }
 #ifdef __GLOB64

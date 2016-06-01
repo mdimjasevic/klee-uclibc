@@ -23,7 +23,7 @@
 
 #include <sys/syscall.h>
 
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 
 /* The difference here is that the sigaction structure used in the
    kernel is not the same as we use in the libc.  Therefore we must
@@ -52,7 +52,7 @@ __libc_sigaction (int sig, const struct sigaction *act, struct sigaction *oact)
 		kact.sa_restorer = act->sa_restorer;
 # endif
 	}
-	
+
 	/* XXX The size argument hopefully will have to be changed to the
 	   real size of the user-level sigset_t.  */
 	result = __syscall_rt_sigaction(sig,

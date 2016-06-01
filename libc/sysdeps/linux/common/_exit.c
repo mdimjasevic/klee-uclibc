@@ -18,7 +18,7 @@ libc_hidden_proto(_exit)
 #ifndef INLINE_SYSCALL
 #define INLINE_SYSCALL(name, nr, args...) __syscall_exit (args)
 #define __NR___syscall_exit __NR_exit
-static inline _syscall1(void, __syscall_exit, int, status);
+static __inline__ _syscall1(void, __syscall_exit, int, status)
 #endif
 
 void attribute_noreturn _exit(int status)
@@ -28,3 +28,4 @@ void attribute_noreturn _exit(int status)
 		INLINE_SYSCALL(exit, 1, status);
 }
 libc_hidden_def(_exit)
+weak_alias(_exit,_Exit)

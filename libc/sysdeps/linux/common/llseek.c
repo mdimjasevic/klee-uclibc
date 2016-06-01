@@ -18,14 +18,14 @@ extern __typeof(lseek64) __libc_lseek64;
 # ifndef INLINE_SYSCALL
 #  define INLINE_SYSCALL(name, nr, args...) __syscall_llseek (args)
 #  define __NR___syscall_llseek __NR__llseek
-static inline _syscall5(int, __syscall_llseek, int, fd, off_t, offset_hi, 
-		off_t, offset_lo, loff_t *, result, int, whence);
+static __inline__ _syscall5(int, __syscall_llseek, int, fd, off_t, offset_hi,
+		off_t, offset_lo, loff_t *, result, int, whence)
 # endif
 
 loff_t __libc_lseek64(int fd, loff_t offset, int whence)
 {
 	loff_t result;
-	return(loff_t)(INLINE_SYSCALL (_llseek, 5, fd, (off_t) (offset >> 32), 
+	return(loff_t)(INLINE_SYSCALL (_llseek, 5, fd, (off_t) (offset >> 32),
 				(off_t) (offset & 0xffffffff), &result, whence) ?: result);
 }
 #else
@@ -40,4 +40,4 @@ loff_t __libc_lseek64(int fd, loff_t offset, int whence)
 libc_hidden_proto(lseek64)
 weak_alias(__libc_lseek64,lseek64)
 libc_hidden_weak(lseek64)
-//strong_alias(__libc_lseek64,_llseek)
+/*strong_alias(__libc_lseek64,_llseek) */

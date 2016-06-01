@@ -6,7 +6,6 @@
 
 #include <_lfs_64.h>
 
-#include <dirent.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +13,7 @@
 #include <dirent.h>
 #include "dirstream.h"
 
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 
 libc_hidden_proto(readdir64_r)
 int readdir64_r(DIR *dir, struct dirent64 *entry, struct dirent64 **result)

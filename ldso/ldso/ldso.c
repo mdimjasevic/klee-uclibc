@@ -50,6 +50,7 @@ int _dl_errno                  = 0;	/* We can't use the real errno in ldso */
 size_t _dl_pagesize            = 0;	/* Store the page size for use later */
 struct r_debug *_dl_debug_addr = NULL;	/* Used to communicate with the gdb debugger */
 void *(*_dl_malloc_function) (size_t size) = NULL;
+void (*_dl_free_function) (void *p) = NULL;
 
 #ifdef __SUPPORT_LD_DEBUG__
 char *_dl_debug           = 0;
@@ -66,6 +67,7 @@ int   _dl_debug_file      = 2;
 unsigned long attribute_hidden _dl_skip_args = 0;
 const char *_dl_progname = UCLIBC_LDSO;      /* The name of the executable being run */
 #include "dl-startup.c"
+#include "dl-symbols.c"
 #include "dl-array.c"
 /* Forward function declarations */
 static int _dl_suid_ok(void);
@@ -95,22 +97,20 @@ extern void _start(void);
 
 #ifdef __UCLIBC_HAS_SSP__
 # include <dl-osinfo.h>
-uintptr_t stack_chk_guard;
+static uintptr_t stack_chk_guard;
 # ifndef THREAD_SET_STACK_GUARD
 /* Only exported for architectures that don't store the stack guard canary
  * in local thread area.  */
 uintptr_t __stack_chk_guard attribute_relro;
-#  ifdef __UCLIBC_HAS_SSP_COMPAT__
-strong_alias(__stack_chk_guard,__guard)
-#  endif
-# elif __UCLIBC_HAS_SSP_COMPAT__
+# endif
+# ifdef __UCLIBC_HAS_SSP_COMPAT__
 uintptr_t __guard attribute_relro;
 # endif
 #endif
 
 static void __attribute__ ((destructor)) __attribute_used__ _dl_fini(void)
 {
-	int i;
+	unsigned int i;
 	struct elf_resolve * tpnt;
 
 	for (i = 0; i < nlist; ++i) {
@@ -130,10 +130,11 @@ static void __attribute__ ((destructor)) __attribute_used__ _dl_fini(void)
 }
 
 void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
-                          ElfW(auxv_t) auxvt[AT_EGID + 1], char **envp,
-                          char **argv)
+			  ElfW(auxv_t) auxvt[AT_EGID + 1], char **envp,
+			  char **argv
+			  DL_GET_READY_TO_RUN_EXTRA_PARMS)
 {
-	DL_LOADADDR_TYPE app_loadaddr = NULL;
+	ElfW(Addr) app_mapaddr = 0;
 	ElfW(Phdr) *ppnt;
 	ElfW(Dyn) *dpnt;
 	char *lpntstr;
@@ -230,11 +231,11 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 	stack_chk_guard = _dl_setup_stack_chk_guard ();
 # ifdef THREAD_SET_STACK_GUARD
 	THREAD_SET_STACK_GUARD (stack_chk_guard);
-#  ifdef __UCLIBC_HAS_SSP_COMPAT__
-	__guard = stack_chk_guard;
-#  endif
 # else
 	__stack_chk_guard = stack_chk_guard;
+# endif
+# ifdef __UCLIBC_HAS_SSP_COMPAT__
+	__guard = stack_chk_guard;
 # endif
 #endif
 
@@ -275,8 +276,8 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 			relro_addr = ppnt->p_vaddr;
 			relro_size = ppnt->p_memsz;
 		}
-		if (!app_loadaddr && (ppnt->p_type == PT_LOAD)) {
-			app_loadaddr = ppnt->p_vaddr;
+		if (!app_mapaddr && (ppnt->p_type == PT_LOAD)) {
+			app_mapaddr = DL_RELOC_ADDR (app_tpnt->loadaddr, ppnt->p_vaddr);
 		}
 		if (ppnt->p_type == PT_DYNAMIC) {
 			dpnt = (ElfW(Dyn) *) DL_RELOC_ADDR(app_tpnt->loadaddr, ppnt->p_vaddr);
@@ -295,7 +296,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 				for (i = 0; i < auxvt[AT_PHNUM].a_un.a_val; i++, ppnt++) {
 					if (ppnt->p_type == PT_LOAD && !(ppnt->p_flags & PF_W))
 						_dl_mprotect((void *) (DL_RELOC_ADDR(app_tpnt->loadaddr, ppnt->p_vaddr) & PAGE_ALIGN),
-							     ((ppnt->p_vaddr + app_tpnt->loadaddr) & ADDR_ALIGN) +
+							     (DL_RELOC_ADDR(app_tpnt->loadaddr, ppnt->p_vaddr) & ADDR_ALIGN) +
 							     (unsigned long) ppnt->p_filesz,
 							     PROT_READ | PROT_WRITE | PROT_EXEC);
 				}
@@ -324,7 +325,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 			_dl_symbol_tables = rpnt = (struct dyn_elf *) _dl_malloc(sizeof(struct dyn_elf));
 			_dl_memset(rpnt, 0, sizeof(struct dyn_elf));
 			rpnt->dyn = _dl_loaded_modules;
-			app_tpnt->mapaddr = app_loadaddr;
+			app_tpnt->mapaddr = app_mapaddr;
 			app_tpnt->rtld_flags = unlazy | RTLD_GLOBAL;
 			app_tpnt->usage_count++;
 			app_tpnt->symbol_scope = _dl_symbol_tables;
@@ -421,13 +422,11 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 	 */
 	debug_addr->r_map = (struct link_map *) _dl_loaded_modules;
 	debug_addr->r_version = 1;
-	debug_addr->r_ldbase = DL_LOADADDR_BASE(load_addr);
+	debug_addr->r_ldbase = (ElfW(Addr)) DL_LOADADDR_BASE(load_addr);
 	debug_addr->r_brk = (unsigned long) &_dl_debug_state;
 	_dl_debug_addr = debug_addr;
 
-	/* Notify the debugger we are in a consistant state */
-	_dl_debug_addr->r_state = RT_CONSISTENT;
-	_dl_debug_state();
+	/* Do not notify the debugger until the interpreter is in the list */
 
 	/* OK, we now have the application in the list, and we have some
 	 * basic stuff in place.  Now search through the list for other shared
@@ -462,7 +461,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 					else
 #endif
 					{
-						_dl_dprintf(2, "%s: can't load " "library '%s'\n", _dl_progname, str);
+						_dl_dprintf(_dl_debug_file, "%s: can't load " "library '%s'\n", _dl_progname, str);
 						_dl_exit(15);
 					}
 				} else {
@@ -495,7 +494,6 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 
 #ifdef __LDSO_PRELOAD_FILE_SUPPORT__
 	do {
-		struct stat st;
 		char *preload;
 		int fd;
 		char c, *cp, *cp2;
@@ -505,7 +503,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 		}
 
 		if ((fd = _dl_open(LDSO_PRELOAD, O_RDONLY, 0)) < 0) {
-			_dl_dprintf(2, "%s: can't open file '%s'\n",
+			_dl_dprintf(_dl_debug_file, "%s: can't open file '%s'\n",
 				    _dl_progname, LDSO_PRELOAD);
 			break;
 		}
@@ -514,7 +512,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 					     PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 		_dl_close(fd);
 		if (preload == (caddr_t) -1) {
-			_dl_dprintf(2, "%s:%i: can't map '%s'\n",
+			_dl_dprintf(_dl_debug_file, "%s:%i: can't map '%s'\n",
 				    _dl_progname, __LINE__, LDSO_PRELOAD);
 			break;
 		}
@@ -553,7 +551,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 				else
 #endif
 				{
-					_dl_dprintf(2, "%s: can't load library '%s'\n", _dl_progname, cp2);
+					_dl_dprintf(_dl_debug_file, "%s: can't load library '%s'\n", _dl_progname, cp2);
 					_dl_exit(15);
 				}
 			} else {
@@ -606,7 +604,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 					} else
 #endif
 					{
-						_dl_dprintf(2, "%s: can't load library '%s'\n", _dl_progname, lpntstr);
+						_dl_dprintf(_dl_debug_file, "%s: can't load library '%s'\n", _dl_progname, lpntstr);
 						_dl_exit(16);
 					}
 				}
@@ -642,7 +640,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 
 	/* Sort the INIT/FINI list in dependency order. */
 	for (tcurr = _dl_loaded_modules->next; tcurr; tcurr = tcurr->next) {
-		int j, k;
+		unsigned int j, k;
 
 		for (j = 0; init_fini_list[j] != tcurr; ++j)
 			/* Empty */;
@@ -777,7 +775,7 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 	 * ld.so.1, so we have to look up each symbol individually.
 	 */
 
-	_dl_envp = (unsigned long *) (intptr_t) _dl_find_hash("__environ", _dl_symbol_tables, NULL, 0);
+	_dl_envp = (unsigned long *) (intptr_t) _dl_find_hash(__C_SYMBOL_PREFIX__ "__environ", _dl_symbol_tables, NULL, 0);
 	if (_dl_envp)
 		*_dl_envp = (unsigned long) envp;
 
@@ -832,8 +830,8 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
 	}
 
 	/* Find the real malloc function and make ldso functions use that from now on */
-	 _dl_malloc_function = (void* (*)(size_t)) (intptr_t) _dl_find_hash("malloc",
-			 _dl_symbol_tables, NULL, ELF_RTYPE_CLASS_PLT);
+	_dl_malloc_function = (void* (*)(size_t)) (intptr_t) _dl_find_hash(__C_SYMBOL_PREFIX__ "malloc",
+			_dl_symbol_tables, NULL, ELF_RTYPE_CLASS_PLT);
 
 	/* Notify the debugger that all objects are now mapped in.  */
 	_dl_debug_addr->r_state = RT_CONSISTENT;
@@ -889,7 +887,7 @@ static int _dl_suid_ok(void)
 	return 0;
 }
 
-void *_dl_malloc(int size)
+void *_dl_malloc(size_t size)
 {
 	void *retval;
 
@@ -900,12 +898,29 @@ void *_dl_malloc(int size)
 	if (_dl_malloc_function)
 		return (*_dl_malloc_function) (size);
 
-	if (_dl_malloc_addr - _dl_mmap_zero + (unsigned)size > _dl_pagesize) {
+	if (_dl_malloc_addr - _dl_mmap_zero + size > _dl_pagesize) {
+		size_t rounded_size;
+
+		/* Since the above assumes we get a full page even if
+		   we request less than that, make sure we request a
+		   full page, since uClinux may give us less than than
+		   a full page.  We might round even
+		   larger-than-a-page sizes, but we end up never
+		   reusing _dl_mmap_zero/_dl_malloc_addr in that case,
+		   so we don't do it.
+
+		   The actual page size doesn't really matter; as long
+		   as we're self-consistent here, we're safe.  */
+		if (size < _dl_pagesize)
+			rounded_size = (size + ADDR_ALIGN) & _dl_pagesize;
+		else
+			rounded_size = size;
+
 		_dl_debug_early("mmapping more memory\n");
-		_dl_mmap_zero = _dl_malloc_addr = _dl_mmap((void *) 0, size,
+		_dl_mmap_zero = _dl_malloc_addr = _dl_mmap((void *) 0, rounded_size,
 				PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		if (_dl_mmap_check_error(_dl_mmap_zero)) {
-			_dl_dprintf(2, "%s: mmap of a spare page failed!\n", _dl_progname);
+			_dl_dprintf(_dl_debug_file, "%s: mmap of a spare page failed!\n", _dl_progname);
 			_dl_exit(20);
 		}
 	}
@@ -919,6 +934,12 @@ void *_dl_malloc(int size)
 	 */
 	_dl_malloc_addr = (unsigned char *) (((unsigned long) _dl_malloc_addr + DL_MALLOC_ALIGN - 1) & ~(DL_MALLOC_ALIGN - 1));
 	return retval;
+}
+
+void _dl_free (void *p)
+{
+	if (_dl_free_function)
+		(*_dl_free_function) (p);
 }
 
 #include "dl-hash.c"

@@ -13,11 +13,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <sys/mman.h>
+#include <malloc.h>
 
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 /*libc_hidden_proto(memset)*/
 libc_hidden_proto(mmap)
 libc_hidden_proto(munmap)
@@ -117,7 +117,7 @@ void free(void *ptr)
 #ifdef L_memalign
 
 #include <bits/uClibc_mutex.h>
-__UCLIBC_MUTEX_STATIC(__malloc_lock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
+__UCLIBC_MUTEX_INIT(__malloc_lock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
 #define __MALLOC_LOCK		__UCLIBC_MUTEX_LOCK(__malloc_lock)
 #define __MALLOC_UNLOCK		__UCLIBC_MUTEX_UNLOCK(__malloc_lock)
 

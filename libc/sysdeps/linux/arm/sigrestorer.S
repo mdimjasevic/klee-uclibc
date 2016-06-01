@@ -16,9 +16,10 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
+#include <bits/arm_asm.h>
 #include <sys/syscall.h>
 #include <linux/version.h>
-	
+
 /* If no SA_RESTORER function was specified by the application we use
    one of these.  This avoids the need for the kernel to synthesise a return
    instruction on the stack, which would involve expensive cache flushes.
@@ -38,6 +39,9 @@
 .type __default_sa_restorer,%function
 .align 2
 #ifdef __ARM_EABI__
+#ifdef __thumb__
+.thumb_func
+#endif
 	.fnstart
 	.save {r0-r15}
 #if LINUX_VERSION_CODE >= 0x020612
@@ -62,6 +66,9 @@ __default_sa_restorer:
 .type __default_rt_sa_restorer,%function
 .align 2
 #ifdef __ARM_EABI__
+#ifdef __thumb__
+.thumb_func
+#endif
 	.fnstart
 	.save {r0-r15}
 #if LINUX_VERSION_CODE >= 0x020612

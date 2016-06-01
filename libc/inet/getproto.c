@@ -12,7 +12,7 @@
 ** but WITHOUT ANY WARRANTY; without even the implied warranty of
 ** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ** Library General Public License for more details.
-** 
+**
 ** You should have received a copy of the GNU Library General Public
 ** License along with the NYS Library; see the file COPYING.LIB.  If
 ** not, write to the Free Software Foundation, Inc., 675 Mass Ave,
@@ -60,10 +60,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 libc_hidden_proto(fopen)
-libc_hidden_proto(strcmp)
-libc_hidden_proto(strpbrk)
+/* Experimentally off - libc_hidden_proto(strcmp) */
+/* Experimentally off - libc_hidden_proto(strpbrk) */
 libc_hidden_proto(atoi)
 libc_hidden_proto(rewind)
 libc_hidden_proto(fgets)
@@ -81,7 +82,7 @@ __UCLIBC_MUTEX_STATIC(mylock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
 static FILE *protof = NULL;
 static struct protoent proto;
 static char *static_aliases = NULL;
-static int proto_stayopen;
+static smallint proto_stayopen;
 
 static void __initbuf(void)
 {
@@ -100,7 +101,7 @@ void setprotoent(int f)
 	protof = fopen(_PATH_PROTOCOLS, "r" );
     else
 	rewind(protof);
-    proto_stayopen |= f;
+    if (f) proto_stayopen = 1;
     __UCLIBC_MUTEX_UNLOCK(mylock);
 }
 libc_hidden_def(setprotoent)

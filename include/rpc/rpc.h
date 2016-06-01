@@ -44,8 +44,8 @@
 #ifndef __FORCE_GLIBC
 #define __FORCE_GLIBC
 #endif
-#ifndef _GNU_SOUCE
-#define _GNU_SOUCE
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 #define _(X)	X
 #include <features.h>
@@ -104,6 +104,9 @@ extern struct pollfd **__rpc_thread_svc_pollfd (void)
 
 extern int *__rpc_thread_svc_max_pollfd (void) __attribute__ ((__const__));
 #define svc_max_pollfd (*__rpc_thread_svc_max_pollfd ())
+
+extern bool_t xdr_accepted_reply (XDR *xdrs, struct accepted_reply *ar);
+extern bool_t xdr_rejected_reply (XDR *xdrs, struct rejected_reply *rr);
 
 __END_DECLS
 

@@ -35,15 +35,15 @@
 #include <glob.h>
 #include <wordexp.h>
 
-libc_hidden_proto(mempcpy)
-libc_hidden_proto(stpcpy)
-libc_hidden_proto(strchr)
-libc_hidden_proto(strcpy)
-libc_hidden_proto(strdup)
-libc_hidden_proto(strlen)
-libc_hidden_proto(strndup)
-libc_hidden_proto(strspn)
-libc_hidden_proto(strcspn)
+/* Experimentally off - libc_hidden_proto(mempcpy) */
+/* Experimentally off - libc_hidden_proto(stpcpy) */
+/* Experimentally off - libc_hidden_proto(strchr) */
+/* Experimentally off - libc_hidden_proto(strcpy) */
+/* Experimentally off - libc_hidden_proto(strdup) */
+/* Experimentally off - libc_hidden_proto(strlen) */
+/* Experimentally off - libc_hidden_proto(strndup) */
+/* Experimentally off - libc_hidden_proto(strspn) */
+/* Experimentally off - libc_hidden_proto(strcspn) */
 libc_hidden_proto(setenv)
 libc_hidden_proto(unsetenv)
 libc_hidden_proto(waitpid)
@@ -70,7 +70,7 @@ libc_hidden_proto(globfree)
 libc_hidden_proto(wordfree)
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_b_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 #endif
 
@@ -110,14 +110,14 @@ static int parse_dquote(char **word, size_t * word_length,
 #define W_CHUNK	(100)
 
 /* Result of w_newword will be ignored if it's the last word. */
-static inline char *w_newword(size_t * actlen, size_t * maxlen)
+static __inline__ char *w_newword(size_t * actlen, size_t * maxlen)
 {
 	*actlen = *maxlen = 0;
 	return NULL;
 }
 
 /* Add a character to the buffer, allocating room for it if needed.  */
-static inline char *w_addchar(char *buffer, size_t * actlen,
+static __inline__ char *w_addchar(char *buffer, size_t * actlen,
 							  size_t * maxlen, char ch)
 	 /* (lengths exclude trailing zero) */
 {
@@ -325,8 +325,8 @@ parse_tilde(char **word, size_t * word_length, size_t * max_length,
 			uid = getuid();
 			buffer = alloca(buflen);
 
-			while ((result = getpwuid_r(uid, &pwd, buffer, buflen, &tpwd)) 
-					!= 0 && errno == ERANGE) 
+			while ((result = getpwuid_r(uid, &pwd, buffer, buflen, &tpwd))
+					!= 0 && errno == ERANGE)
 			{
 				buflen += 1000;
 				buffer = alloca(buflen);
@@ -784,9 +784,10 @@ parse_arith(char **word, size_t * word_length, size_t * max_length,
 }
 
 /* Function called by child process in exec_comm() */
-static void
+static void attribute_noreturn
 exec_comm_child(char *comm, int *fildes, int showerr, int noexec)
 {
+	int fd;
 	const char *args[4] = { _PATH_BSHELL, "-c", comm, NULL };
 
 	/* Execute the command, or just check syntax? */
@@ -794,13 +795,14 @@ exec_comm_child(char *comm, int *fildes, int showerr, int noexec)
 		args[1] = "-nc";
 
 	/* Redirect output.  */
-	dup2(fildes[1], 1);
-	close(fildes[1]);
+	fd = fildes[1];
+	if (fd != 1) {
+		dup2(fd, 1);
+		close(fd);
+	}
 
 	/* Redirect stderr to /dev/null if we have to.  */
 	if (showerr == 0) {
-		int fd;
-
 		close(2);
 		fd = open(_PATH_DEVNULL, O_WRONLY);
 		if (fd >= 0 && fd != 2) {
@@ -812,7 +814,8 @@ exec_comm_child(char *comm, int *fildes, int showerr, int noexec)
 	/* Make sure the subshell doesn't field-split on our behalf. */
 	unsetenv("IFS");
 
-	close(fildes[0]);
+	if (fildes[0] != 1)
+		close(fildes[0]);
 	execve(_PATH_BSHELL, (char *const *) args, __environ);
 
 	/* Bad.  What now?  */
@@ -1076,8 +1079,7 @@ parse_comm(char **word, size_t * word_length, size_t * max_length,
 	}
 
 	/* Premature end */
-	if (comm)
-		free(comm);
+	free(comm);
 
 	return WRDE_SYNTAX;
 }
@@ -1370,8 +1372,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 							   &buffer[20]);
 			*word = w_addstr(*word, word_length, max_length, value);
 			free(env);
-			if (pattern)
-				free(pattern);
+			free(pattern);
 			return *word ? 0 : WRDE_NOSPACE;
 		}
 		/* Is it `$*' or `$@' (unquoted) ? */
@@ -1530,8 +1531,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 						if (free_value)
 							free(value);
 
-						if (expanded)
-							free(expanded);
+						free(expanded);
 
 						goto do_error;
 					}
@@ -1550,8 +1550,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 						if (free_value)
 							free(value);
 
-						if (expanded)
-							free(expanded);
+						free(expanded);
 
 						goto do_error;
 					}
@@ -1573,8 +1572,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 					goto no_space;
 			}
 
-			if (pattern)
-				free(pattern);
+			free(pattern);
 
 			pattern = expanded;
 		}
@@ -1723,7 +1721,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 				/* Substitute parameter */
 				break;
 
-			if (free_value && value)
+			if (free_value)
 				free(value);
 
 			if (!colon_seen && value)
@@ -1740,7 +1738,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 
 		case ACT_NONNULL_SUBST:
 			if (value && (*value || !colon_seen)) {
-				if (free_value && value)
+				if (free_value)
 					free(value);
 
 				value = pattern ? strdup(pattern) : pattern;
@@ -1769,7 +1767,7 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 				goto success;
 			}
 
-			if (free_value && value)
+			if (free_value)
 				free(value);
 
 			value = pattern ? strdup(pattern) : pattern;
@@ -1895,16 +1893,14 @@ parse_param(char **word, size_t * word_length, size_t * max_length,
 	error = WRDE_SYNTAX;
 
   do_error:
-	if (env)
-		free(env);
+	free(env);
 
-	if (pattern)
-		free(pattern);
+	free(pattern);
 
 	return error;
 }
 #else
-static inline int
+static __inline__ int
 parse_backtick(char **word, size_t * word_length, size_t * max_length,
 			   const char *words, size_t * offset, int flags,
 			   wordexp_t * pwordexp, const char *ifs,
@@ -2269,8 +2265,7 @@ int wordexp(const char *words, wordexp_t * we, int flags)
 	 *  set we members back to what they were.
 	 */
 
-	if (word != NULL)
-		free(word);
+	free(word);
 
 	if (error == WRDE_NOSPACE)
 		return WRDE_NOSPACE;

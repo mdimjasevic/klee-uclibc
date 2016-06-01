@@ -30,11 +30,11 @@
 #include <string.h>
 #include <ctype.h>
 
-libc_hidden_proto(memcpy)
-libc_hidden_proto(memset)
-libc_hidden_proto(strchr)
-libc_hidden_proto(strcpy)
-libc_hidden_proto(strlen)
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(memset) */
+/* Experimentally off - libc_hidden_proto(strchr) */
+/* Experimentally off - libc_hidden_proto(strcpy) */
+/* Experimentally off - libc_hidden_proto(strlen) */
 libc_hidden_proto(sprintf)
 libc_hidden_proto(tolower)
 
@@ -58,9 +58,11 @@ libc_hidden_proto(tolower)
 static const char *
 inet_ntop4(const u_char *src, char *dst, size_t size)
 {
-	char tmp[sizeof ("255.255.255.255") + 1] = "\0";
+	char tmp[sizeof ("255.255.255.255") + 1];
 	int octet;
 	int i;
+
+	tmp[0] = '\0';
 
 	i = 0;
 	for (octet = 0; octet <= 3; octet++) {
@@ -126,6 +128,8 @@ inet_ntop6(const u_char *src, char *dst, size_t size)
 		words[i / 2] = (src[i] << 8) | src[i + 1];
 	best.base = -1;
 	cur.base = -1;
+	best.len = best.len; /* shutting up compiler warning */
+	cur.len = cur.len;   /* shutting up compiler warning */
 	for (i = 0; i < 8; i++) {
 		if (words[i] == 0) {
 			if (cur.base == -1)
@@ -252,7 +256,7 @@ inet_pton4(const char *src, u_char *dst)
 #ifdef __UCLIBC_HAS_IPV6__
 
 /* We cannot use the macro version of tolower() or very bad
- * things happen when '*src++' gets evaluated multiple times.  
+ * things happen when '*src++' gets evaluated multiple times.
  * So undef it here so we get the function version of tolower
  * instead.
  */

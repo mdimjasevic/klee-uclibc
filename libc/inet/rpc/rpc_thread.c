@@ -18,6 +18,7 @@ libc_hidden_proto(__rpc_thread_svc_max_pollfd)
 #ifdef __UCLIBC_HAS_THREADS__
 
 #include <bits/libc-tsd.h>
+#include <bits/libc-lock.h>
 
 /* Variable used in non-threaded applications or for the first thread.  */
 static struct rpc_thread_variables __libc_tsd_RPC_VARS_mem;
@@ -34,7 +35,7 @@ __rpc_thread_destroy (void)
 	if (tvp != NULL && tvp != &__libc_tsd_RPC_VARS_mem) {
 		__rpc_thread_svc_cleanup ();
 		__rpc_thread_clnt_cleanup ();
-		//__rpc_thread_key_cleanup ();
+		/*__rpc_thread_key_cleanup (); */
 		free (tvp->authnone_private_s);
 		free (tvp->clnt_perr_buf_s);
 		free (tvp->clntraw_private_s);

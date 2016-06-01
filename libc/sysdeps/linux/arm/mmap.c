@@ -16,8 +16,8 @@
 libc_hidden_proto (mmap)
 #if defined (__UCLIBC_MMAP_HAS_6_ARGS__) && defined (__NR_mmap)
 #define __NR__mmap __NR_mmap
-static inline _syscall6 (__ptr_t, _mmap, __ptr_t, addr, size_t, len,
-                         int, prot, int, flags, int, fd, __off_t, offset);
+static __inline__ _syscall6 (__ptr_t, _mmap, __ptr_t, addr, size_t, len,
+                         int, prot, int, flags, int, fd, __off_t, offset)
 __ptr_t mmap(__ptr_t addr, size_t len, int prot,
              int flags, int fd, __off_t offset)
 {
@@ -31,7 +31,7 @@ __ptr_t mmap(__ptr_t addr, size_t len, int prot,
 # define MMAP2_PAGE_SHIFT 12
 #endif
 
-static inline _syscall6 (__ptr_t, _mmap, __ptr_t, addr, size_t, len,
+static __inline__ _syscall6 (__ptr_t, _mmap, __ptr_t, addr, size_t, len,
                          int, prot, int, flags, int, fd, __off_t, offset);
 __ptr_t mmap(__ptr_t addr, size_t len, int prot,
              int flags, int fd, __off_t offset)
@@ -43,16 +43,16 @@ __ptr_t mmap(__ptr_t addr, size_t len, int prot,
         return MAP_FAILED;
     }
 #ifdef __USE_FILE_OFFSET64
-  return (__ptr_t) _mmap (addr, len, prot, flags,
-						  fd,((__u_quad_t) offset >> MMAP2_PAGE_SHIFT));
+    return (__ptr_t) _mmap (addr, len, prot, flags,
+                            fd, ((__u_quad_t) offset >> MMAP2_PAGE_SHIFT));
 #else
-  return (__ptr_t) _mmap (addr, len, prot, flags,
-                          fd,((__u_long) offset >> MMAP2_PAGE_SHIFT));
+    return (__ptr_t) _mmap (addr, len, prot, flags,
+                            fd, ((__u_long) offset >> MMAP2_PAGE_SHIFT));
 #endif
 }
 #elif defined (__NR_mmap)
 # define __NR__mmap __NR_mmap
-static inline _syscall1(__ptr_t, _mmap, unsigned long *, buffer);
+static __inline__ _syscall1(__ptr_t, _mmap, unsigned long *, buffer)
 __ptr_t mmap(__ptr_t addr, size_t len, int prot,
              int flags, int fd, __off_t offset)
 {

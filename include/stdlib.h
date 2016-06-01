@@ -203,6 +203,8 @@ extern unsigned long int strtoul (__const char *__restrict __nptr,
 __END_NAMESPACE_STD
 
 #ifdef __USE_BSD
+#include <sys/types.h> /* for u_quad_t */
+
 /* Convert a string to a quadword integer.  */
 __extension__
 extern long long int strtoq (__const char *__restrict __nptr,
@@ -210,7 +212,7 @@ extern long long int strtoq (__const char *__restrict __nptr,
      __THROW __nonnull ((1)) __wur;
 /* Convert a string to an unsigned quadword integer.  */
 __extension__
-extern unsigned long long int strtouq (__const char *__restrict __nptr,
+extern u_quad_t strtouq (__const char *__restrict __nptr,
 				       char **__restrict __endptr, int __base)
      __THROW __nonnull ((1)) __wur;
 #endif /* GCC and use BSD.  */
@@ -489,7 +491,7 @@ extern void cfree (void *__ptr) __THROW;
 extern void *valloc (size_t __size) __THROW __attribute_malloc__ __wur;
 #endif
 
-#ifdef __USE_XOPEN2K
+#if defined __USE_XOPEN2K && defined __UCLIBC_HAS_ADVANCED_REALTIME__
 /* Allocate memory of SIZE bytes with an alignment of ALIGNMENT.  */
 extern int posix_memalign (void **__memptr, size_t __alignment, size_t __size)
      __THROW __nonnull ((1)) __wur;
@@ -628,17 +630,14 @@ extern char *canonicalize_file_name (__const char *__name)
      __THROW __nonnull ((1)) __wur;
 #endif
 
-#if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
-/* Return the canonical absolute name of file NAME.  The last file name
-   component need not exist, and may be a symlink to a nonexistent file.
-   If RESOLVED is null, the result is malloc'd; otherwise, if the canonical
-   name is PATH_MAX chars or more, returns null with `errno' set to
-   ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars, returns the
-   name in RESOLVED.  */
+/* Return the canonical absolute name of file NAME.  If RESOLVED is
+   null, the result is malloc'd; otherwise, if the canonical name is
+   PATH_MAX chars or more, returns null with `errno' set to
+   ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
+   returns the name in RESOLVED.  */
 /* we choose to handle __resolved==NULL as crash :) */
 extern char *realpath (__const char *__restrict __name,
-		       char *__restrict __resolved) __THROW __wur __nonnull((2));
-#endif
+		       char *__restrict __resolved) __THROW __wur;
 
 
 /* Shorthand for type of comparison functions.  */
@@ -802,8 +801,10 @@ extern int getsubopt (char **__restrict __optionp,
 
 
 #ifdef __USE_XOPEN
+# if defined __UCLIBC_HAS_CRYPT__
 /* Setup DES tables according KEY.  */
 extern void setkey (__const char *__key) __THROW __nonnull ((1));
+# endif /* __UCLIBC_HAS_CRYPT__ */
 #endif
 
 
@@ -812,12 +813,13 @@ extern void setkey (__const char *__key) __THROW __nonnull ((1));
 #ifdef __USE_XOPEN2K
 /* Return a master pseudo-terminal handle.  */
 extern int posix_openpt (int __oflag) __wur;
+libc_hidden_proto(posix_openpt)
 #endif
 
 #ifdef __USE_XOPEN
 /* The next four functions all take a master pseudo-tty fd and
    perform an operation on the associated slave:  */
-
+#ifdef __UCLIBC_HAS_PTY__
 /* Chown the slave to the calling user.  */
 extern int grantpt (int __fd) __THROW;
 
@@ -829,17 +831,21 @@ extern int unlockpt (int __fd) __THROW;
    the master FD is open on, or NULL on errors.
    The returned storage is good until the next call to this function.  */
 extern char *ptsname (int __fd) __THROW __wur;
+#endif /* __UCLIBC_HAS_PTY__ */
 #endif
 
 #ifdef __USE_GNU
+# if defined __UCLIBC_HAS_PTY__
 /* Store at most BUFLEN characters of the pathname of the slave pseudo
    terminal associated with the master FD is open on in BUF.
    Return 0 on success, otherwise an error number.  */
 extern int ptsname_r (int __fd, char *__buf, size_t __buflen)
      __THROW __nonnull ((2));
-
+# endif
+# if defined __UCLIBC_HAS_GETPT__
 /* Open a master pseudo terminal and return its file descriptor.  */
 extern int getpt (void);
+# endif
 #endif
 
 #if 0 /* def __USE_BSD */

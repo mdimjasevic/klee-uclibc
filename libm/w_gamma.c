@@ -24,7 +24,6 @@ static char rcsid[] = "$NetBSD: w_gamma.c,v 1.7 1995/11/20 22:06:43 jtc Exp $";
 #include "math_private.h"
 
 libm_hidden_proto(signgam)
-
 #ifdef __STDC__
 	double gamma(double x)
 #else
@@ -38,7 +37,7 @@ libm_hidden_proto(signgam)
         double y;
         y = __ieee754_lgamma_r(x,&signgam);
         if(_LIB_VERSION == _IEEE_) return y;
-        if(!finite(y)&&finite(x)) {
+        if(!isfinite(y)&&isfinite(x)) {
             if(floor(x)==x&&x<=0.0)
                 return __kernel_standard(x,x,41); /* gamma pole */
             else

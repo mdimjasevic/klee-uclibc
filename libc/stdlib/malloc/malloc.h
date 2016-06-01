@@ -70,14 +70,14 @@ struct malloc_mmb
   struct malloc_mmb *next;
 };
 
-/* A list of all malloc_mmb structures describing blocsk that malloc has
+/* A list of all malloc_mmb structures describing blocks that malloc has
    mmapped, ordered by the block address.  */
 extern struct malloc_mmb *__malloc_mmapped_blocks;
 
 /* A heap used for allocating malloc_mmb structures.  We could allocate
    them from the main heap, but that tends to cause heap fragmentation in
    annoying ways.  */
-extern struct heap __malloc_mmb_heap;
+extern struct heap_free_area *__malloc_mmb_heap;
 
 /* Define MALLOC_MMB_DEBUGGING to cause malloc to emit debugging info about
    about mmap block allocation/freeing by the `uclinux broken munmap' code
@@ -130,24 +130,21 @@ extern int __malloc_mmb_debug;
 
 
 /* Locking for multithreaded apps.  */
-#ifdef __UCLIBC_HAS_THREADS__
+#if defined __UCLIBC_HAS_THREADS__ && defined __LINUXTHREADS_OLD__
 
 # include <pthread.h>
 # include <bits/uClibc_pthread.h>
 
 # define MALLOC_USE_LOCKING
 
-typedef pthread_mutex_t malloc_mutex_t;
-# define MALLOC_MUTEX_INIT	PTHREAD_MUTEX_INITIALIZER
-
 # ifdef MALLOC_USE_SBRK
 /* This lock is used to serialize uses of the `sbrk' function (in both
    malloc and free, sbrk may be used several times in succession, and
    things will break if these multiple calls are interleaved with another
    thread's use of sbrk!).  */
-extern malloc_mutex_t __malloc_sbrk_lock;
-#  define __malloc_lock_sbrk()	__pthread_mutex_lock (&__malloc_sbrk_lock)
-#  define __malloc_unlock_sbrk() __pthread_mutex_unlock (&__malloc_sbrk_lock)
+__UCLIBC_MUTEX_EXTERN(__malloc_sbrk_lock);
+#  define __malloc_lock_sbrk()	__UCLIBC_MUTEX_LOCK(__malloc_sbrk_lock)
+#  define __malloc_unlock_sbrk() __UCLIBC_MUTEX_UNLOCK(__malloc_sbrk_lock)
 # endif /* MALLOC_USE_SBRK */
 
 #else /* !__UCLIBC_HAS_THREADS__ */
@@ -221,4 +218,11 @@ extern void __malloc_debug_printf (int indent, const char *fmt, ...);
 
 
 /* The malloc heap.  */
-extern struct heap __malloc_heap;
+extern struct heap_free_area *__malloc_heap;
+#if defined __UCLIBC_HAS_THREADS__
+#include <bits/uClibc_mutex.h>
+__UCLIBC_MUTEX_EXTERN(__malloc_heap_lock);
+#ifdef __UCLIBC_UCLINUX_BROKEN_MUNMAP__
+__UCLIBC_MUTEX_EXTERN(__malloc_mmb_heap_lock);
+#endif
+#endif

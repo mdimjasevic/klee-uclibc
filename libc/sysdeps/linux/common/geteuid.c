@@ -15,11 +15,11 @@ libc_hidden_proto(geteuid)
 #if defined(__NR_geteuid32)
 # undef __NR_geteuid
 # define __NR_geteuid __NR_geteuid32
-_syscall0(uid_t, geteuid);
+_syscall0(uid_t, geteuid)
 
 #elif defined(__NR_geteuid)
 # define __NR___syscall_geteuid __NR_geteuid
-static inline _syscall0(int, __syscall_geteuid);
+static __inline__ _syscall0(int, __syscall_geteuid)
 uid_t geteuid(void)
 {
 	return (__syscall_geteuid());

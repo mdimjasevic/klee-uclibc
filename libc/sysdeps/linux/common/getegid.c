@@ -15,11 +15,11 @@ libc_hidden_proto(getegid)
 #if defined(__NR_getegid32)
 # undef __NR_getegid
 # define __NR_getegid __NR_getegid32
-_syscall0(gid_t, getegid);
+_syscall0(gid_t, getegid)
 
 #elif defined(__NR_getegid)
 # define __NR___syscall_getegid __NR_getegid
-static inline _syscall0(int, __syscall_getegid);
+static __inline__ _syscall0(int, __syscall_getegid)
 gid_t getegid(void)
 {
 	return (__syscall_getegid());

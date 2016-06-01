@@ -10,7 +10,7 @@
 #ifdef WANT_WIDE
 # define Wstrncpy wcsncpy
 #else
-libc_hidden_proto(strncpy)
+/* Experimentally off - libc_hidden_proto(strncpy) */
 # define Wstrncpy strncpy
 #endif
 
@@ -31,7 +31,7 @@ Wchar *Wstrncpy(Wchar * __restrict s1, register const Wchar * __restrict s2,
 		--n;
 	}
 #endif
-	
+
 	return s1;
 }
 #ifndef WANT_WIDE

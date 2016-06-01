@@ -13,26 +13,7 @@
  * Licensed under GPLv2 or later
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
-#include "bswap.h"
-#include "link.h"
-#include "dl-defs.h"
-/* makefile will include elf.h for us */
-
-#ifdef DMALLOC
-#include <dmalloc.h>
-#endif
+#include "porting.h"
 
 #if defined(__alpha__)
 #define MATCH_MACHINE(x) (x == EM_ALPHA)
@@ -42,6 +23,11 @@
 #if defined(__arm__) || defined(__thumb__)
 #define MATCH_MACHINE(x) (x == EM_ARM)
 #define ELFCLASSM	ELFCLASS32
+#endif
+
+#if defined(__avr32__)
+#define MATCH_MACHINE(x) (x == EM_AVR32)
+#define ELFCLASSM      ELFCLASS32
 #endif
 
 #if defined(__s390__)
@@ -130,14 +116,10 @@
 # warning "You really should add a MATCH_MACHINE() macro for your architecture"
 #endif
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#if UCLIBC_ENDIAN_HOST == UCLIBC_ENDIAN_LITTLE
 #define ELFDATAM	ELFDATA2LSB
-#elif __BYTE_ORDER == __BIG_ENDIAN
+#elif UCLIBC_ENDIAN_HOST == UCLIBC_ENDIAN_BIG
 #define ELFDATAM	ELFDATA2MSB
-#endif
-
-#ifndef UCLIBC_RUNTIME_PREFIX
-# define UCLIBC_RUNTIME_PREFIX "/"
 #endif
 
 struct library {
@@ -146,14 +128,14 @@ struct library {
 	char *path;
 	struct library *next;
 };
-struct library *lib_list = NULL;
-char not_found[] = "not found";
-char *interp_name = NULL;
-char *interp_dir = NULL;
-int byteswap;
+static struct library *lib_list = NULL;
+static char not_found[] = "not found";
+static char *interp_name = NULL;
+static char *interp_dir = NULL;
+static int byteswap;
 static int interpreter_already_found = 0;
 
-inline uint32_t byteswap32_to_host(uint32_t value)
+static __inline__ uint32_t byteswap32_to_host(uint32_t value)
 {
 	if (byteswap == 1) {
 		return (bswap_32(value));
@@ -161,7 +143,7 @@ inline uint32_t byteswap32_to_host(uint32_t value)
 		return (value);
 	}
 }
-inline uint64_t byteswap64_to_host(uint64_t value)
+static __inline__ uint64_t byteswap64_to_host(uint64_t value)
 {
 	if (byteswap == 1) {
 		return (bswap_64(value));
@@ -176,7 +158,7 @@ inline uint64_t byteswap64_to_host(uint64_t value)
 # define byteswap_to_host(x) byteswap64_to_host(x)
 #endif
 
-ElfW(Shdr) *elf_find_section_type(uint32_t key, ElfW(Ehdr) *ehdr)
+static ElfW(Shdr) *elf_find_section_type(uint32_t key, ElfW(Ehdr) *ehdr)
 {
 	int j;
 	ElfW(Shdr) *shdr;
@@ -189,7 +171,7 @@ ElfW(Shdr) *elf_find_section_type(uint32_t key, ElfW(Ehdr) *ehdr)
 	return NULL;
 }
 
-ElfW(Phdr) *elf_find_phdr_type(uint32_t type, ElfW(Ehdr) *ehdr)
+static ElfW(Phdr) *elf_find_phdr_type(uint32_t type, ElfW(Ehdr) *ehdr)
 {
 	int j;
 	ElfW(Phdr) *phdr = (ElfW(Phdr) *) (ehdr->e_phoff + (char *)ehdr);
@@ -202,7 +184,7 @@ ElfW(Phdr) *elf_find_phdr_type(uint32_t type, ElfW(Ehdr) *ehdr)
 }
 
 /* Returns value if return_val==1, ptr otherwise */
-void *elf_find_dynamic(int64_t const key, ElfW(Dyn) *dynp,
+static void *elf_find_dynamic(int64_t const key, ElfW(Dyn) *dynp,
 		       ElfW(Ehdr) *ehdr, int return_val)
 {
 	ElfW(Phdr) *pt_text = elf_find_phdr_type(PT_LOAD, ehdr);
@@ -232,33 +214,27 @@ static char *elf_find_rpath(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic)
 	return NULL;
 }
 
-int check_elf_header(ElfW(Ehdr) *const ehdr)
+static int check_elf_header(ElfW(Ehdr) *const ehdr)
 {
-	if (!ehdr || strncmp((char *)ehdr, ELFMAG, SELFMAG) != 0 ||
-	    ehdr->e_ident[EI_CLASS] != ELFCLASSM ||
-	    ehdr->e_ident[EI_VERSION] != EV_CURRENT)
-	{
+	if (!ehdr || *(uint32_t*)ehdr != ELFMAG_U32
+	 || ehdr->e_ident[EI_CLASS] != ELFCLASSM
+	 || ehdr->e_ident[EI_VERSION] != EV_CURRENT
+	) {
 		return 1;
 	}
 
 	/* Check if the target endianness matches the host's endianness */
 	byteswap = 0;
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-	if (ehdr->e_ident[5] == ELFDATA2MSB) {
-		/* Ick -- we will have to byte-swap everything */
-		byteswap = 1;
+	if (UCLIBC_ENDIAN_HOST == UCLIBC_ENDIAN_LITTLE) {
+		if (ehdr->e_ident[5] == ELFDATA2MSB)
+			byteswap = 1;
+	} else if (UCLIBC_ENDIAN_HOST == UCLIBC_ENDIAN_BIG) {
+		if (ehdr->e_ident[5] == ELFDATA2LSB)
+			byteswap = 1;
 	}
-#elif __BYTE_ORDER == __BIG_ENDIAN
-	if (ehdr->e_ident[5] == ELFDATA2LSB) {
-		/* Ick -- we will have to byte-swap everything */
-		byteswap = 1;
-	}
-#else
-#error Unknown host byte order!
-#endif
 
-	/* Be vary lazy, and only byteswap the stuff we use */
-	if (byteswap == 1) {
+	/* Be very lazy, and only byteswap the stuff we use */
+	if (byteswap) {
 		ehdr->e_type = bswap_16(ehdr->e_type);
 		ehdr->e_phoff = byteswap_to_host(ehdr->e_phoff);
 		ehdr->e_shoff = byteswap_to_host(ehdr->e_shoff);
@@ -273,7 +249,7 @@ int check_elf_header(ElfW(Ehdr) *const ehdr)
 static caddr_t cache_addr = NULL;
 static size_t cache_size = 0;
 
-int map_cache(void)
+static int map_cache(void)
 {
 	int fd;
 	struct stat st;
@@ -286,7 +262,7 @@ int map_cache(void)
 	else if (cache_addr != NULL)
 		return 0;
 
-	if (stat(LDSO_CACHE, &st) || (fd = open(LDSO_CACHE, O_RDONLY, 0)) < 0) {
+	if (stat(LDSO_CACHE, &st) || (fd = open(LDSO_CACHE, O_RDONLY)) < 0) {
 		fprintf(stderr, "ldd: can't open cache '%s'\n", LDSO_CACHE);
 		cache_addr = (caddr_t) - 1;	/* so we won't try again */
 		return -1;
@@ -330,7 +306,7 @@ fail:
 	return -1;
 }
 
-int unmap_cache(void)
+static int unmap_cache(void)
 {
 	if (cache_addr == NULL || cache_addr == (caddr_t) - 1)
 		return -1;
@@ -343,10 +319,10 @@ int unmap_cache(void)
 	return 0;
 }
 #else
-static inline void map_cache(void)
+static __inline__ void map_cache(void)
 {
 }
-static inline void unmap_cache(void)
+static __inline__ void unmap_cache(void)
 {
 }
 #endif
@@ -363,7 +339,7 @@ static void search_for_named_library(char *name, char *result,
 	/* We need a writable copy of this string */
 	path = strdup(path_list);
 	if (!path) {
-		fprintf(stderr, "Out of memory!\n");
+		fprintf(stderr, "%s: Out of memory!\n", __func__);
 		exit(EXIT_FAILURE);
 	}
 	/* Eliminate all double //s */
@@ -396,8 +372,8 @@ static void search_for_named_library(char *name, char *result,
 	*result = '\0';
 }
 
-void locate_library_file(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic, int is_suid,
-			 struct library *lib)
+static void locate_library_file(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic,
+                                int is_suid, struct library *lib)
 {
 	char *buf;
 	char *path;
@@ -412,7 +388,7 @@ void locate_library_file(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic, int is_suid,
 	/* We need some elbow room here.  Make some room... */
 	buf = malloc(1024);
 	if (!buf) {
-		fprintf(stderr, "Out of memory!\n");
+		fprintf(stderr, "%s: Out of memory!\n", __func__);
 		exit(EXIT_FAILURE);
 	}
 
@@ -521,7 +497,7 @@ static int add_library(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic, int is_setuid, char
 			tmp1++;
 		}
 		if (strcmp(tmp2, s) == 0) {
-			//printf("find_elf_interpreter is skipping '%s' (already in list)\n", cur->name);
+			/*printf("find_elf_interpreter is skipping '%s' (already in list)\n", cur->name); */
 			return 0;
 		}
 	}
@@ -539,7 +515,7 @@ static int add_library(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic, int is_setuid, char
 	/* Now try and locate where this library might be living... */
 	locate_library_file(ehdr, dynamic, is_setuid, newlib);
 
-	//printf("add_library is adding '%s' to '%s'\n", newlib->name, newlib->path);
+	/*printf("add_library is adding '%s' to '%s'\n", newlib->name, newlib->path); */
 	if (!lib_list) {
 		lib_list = newlib;
 	} else {
@@ -592,7 +568,7 @@ static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 		for (cur = lib_list; cur; cur = cur->next) {
 			/* Check if this library is already in the list */
 			if (strcmp(cur->name, tmp1) == 0) {
-				//printf("find_elf_interpreter is replacing '%s' (already in list)\n", cur->name);
+				/*printf("find_elf_interpreter is replacing '%s' (already in list)\n", cur->name); */
 				newlib = cur;
 				free(newlib->name);
 				if (newlib->path != not_found) {
@@ -614,7 +590,7 @@ static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 		newlib->next = NULL;
 
 #if 0
-		//printf("find_elf_interpreter is adding '%s' to '%s'\n", newlib->name, newlib->path);
+		/*printf("find_elf_interpreter is adding '%s' to '%s'\n", newlib->name, newlib->path); */
 		if (!lib_list) {
 			lib_list = newlib;
 		} else {
@@ -632,7 +608,7 @@ static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 /*
 #warning "There may be two warnings here about vfork() clobbering, ignore them"
 */
-int find_dependancies(char *filename)
+static int find_dependencies(char *filename)
 {
 	int is_suid = 0;
 	FILE *thefile;
@@ -669,7 +645,7 @@ int find_dependancies(char *filename)
 	ehdr = mmap(0, statbuf.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(thefile), 0);
 	if (ehdr == MAP_FAILED) {
 		fclose(thefile);
-		fprintf(stderr, "Out of memory!\n");
+		fprintf(stderr, "mmap(%s) failed: %s\n", filename, strerror(errno));
 		return -1;
 	}
 
@@ -707,8 +683,8 @@ foo:
 	    && ehdr->e_ident[EI_VERSION] == EV_CURRENT
 	    && MATCH_MACHINE(ehdr->e_machine))
 	{
-		struct stat statbuf;
-		if (stat(interp->path, &statbuf) == 0 && S_ISREG(statbuf.st_mode)) {
+		struct stat st;
+		if (stat(interp->path, &st) == 0 && S_ISREG(st.st_mode)) {
 			pid_t pid;
 			int status;
 			static const char *const environment[] = {
@@ -755,8 +731,8 @@ int main(int argc, char **argv)
 	struct library *cur;
 
 	if (argc < 2) {
-		fprintf(stderr, "ldd: missing file arguments\n");
-		fprintf(stderr, "Try `ldd --help' for more information.\n");
+		fprintf(stderr, "ldd: missing file arguments\n"
+				"Try `ldd --help' for more information.\n");
 		exit(EXIT_FAILURE);
 	}
 	if (argc > 2)
@@ -771,8 +747,8 @@ int main(int argc, char **argv)
 		}
 
 		if (strcmp(*argv, "--help") == 0 || strcmp(*argv, "-h") == 0) {
-			fprintf(stderr, "Usage: ldd [OPTION]... FILE...\n");
-			fprintf(stderr, "\t--help\t\tprint this help and exit\n");
+			fprintf(stderr, "Usage: ldd [OPTION]... FILE...\n"
+					"\t--help\t\tprint this help and exit\n");
 			exit(EXIT_SUCCESS);
 		}
 
@@ -788,7 +764,7 @@ int main(int argc, char **argv)
 
 		map_cache();
 
-		if (find_dependancies(filename) != 0)
+		if (find_dependencies(filename) != 0)
 			continue;
 
 		while (got_em_all) {
@@ -798,7 +774,7 @@ int main(int argc, char **argv)
 				if (cur->resolved == 0 && cur->path) {
 					got_em_all = 1;
 					printf("checking sub-depends for '%s'\n", cur->path);
-					find_dependancies(cur->path);
+					find_dependencies(cur->path);
 					cur->resolved = 1;
 				}
 			}

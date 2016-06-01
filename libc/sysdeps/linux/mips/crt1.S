@@ -81,33 +81,16 @@
 #endif
 	.type	    main,@function
 	.type	    __uClibc_main,@function
+	.ent	__start
 
 __start:
 #ifdef __PIC__
-#if _MIPS_SIM == _MIPS_SIM_ABI32
-        .set noreorder
-	move $0, $31		/* Save old ra.  */
-	bal 10f			/* Find addr of cpload.  */
-        nop
-10:
-	.cpload $31
-	move $31, $0
-	.set reorder
+	SETUP_GPX($0)
+	SETUP_GPX64($25,$0)
 #else
-	move $0, $31; /* Save old ra.  */
-	.set noreorder
-	bal 10f /* Find addr of .cpsetup.  */
-	nop
-10:
-	.set reorder
-	.cpsetup $31, $25, 10b
+	PTR_LA $28, _gp             /* Setup GP correctly if we're non-PIC.  */
 	move $31, $0
 #endif
-#else
-	la $28, _gp             /* Setup GP correctly if we're non-PIC.  */
-	move $31, $0
-#endif
-
 
 	PTR_LA $4, main		/* main */
 	PTR_L $5, 0($29)		/* argc */
@@ -116,18 +99,18 @@ __start:
 	/* Allocate space on the stack for seven arguments and
 	 * make sure the stack is aligned to double words (8 bytes) */
 
+	and $29, -2 * SZREG
+
 #if _MIPS_SIM == _MIPS_SIM_ABI32
-	and $29, -2 * 4
-	subu $29, 32
-	la $7, _init		/* init */
-	la $8, _fini
-	sw $8, 16($29)		/* fini */
-	sw $2, 20($29)		/* rtld_fini */
-	sw $29, 24($29)		/* stack_end */
-#else
-	and $29, -2 * PTRSIZE
+	PTR_SUBIU $29, 32
+#endif
 	PTR_LA $7, _init		/* init */
-	PTR_LA $8, _fini		/* fini */
+	PTR_LA $8, _fini
+#if _MIPS_SIM == _MIPS_SIM_ABI32
+	PTR_S $8, 16($29)		/* fini */
+	PTR_S $2, 20($29)		/* rtld_fini */
+	PTR_S $29, 24($29)		/* stack_end */
+#else
 	move $9, $2		/* rtld_fini */
 	move $10, $29		/* stack_end */
 #endif
@@ -136,6 +119,7 @@ hlt:
 	/* Crash if somehow `__uClibc_main' returns anyway.  */
 	b   hlt
 .size __start,.-__start
+.end __start
 
 /* Define a symbol for the first piece of initialized data.  */
 	.data
@@ -144,5 +128,4 @@ __data_start:
 	.long 0
 	.weak data_start
 	data_start = __data_start
-
 

@@ -127,13 +127,6 @@ unsigned long _dl_linux_resolver(struct elf_resolve *tpnt, int reloc_entry)
 	debug_sym(symtab,strtab,symtab_index);
 	debug_reloc(symtab,strtab,this_reloc);
 
-#if defined (__SUPPORT_LD_DEBUG__)
-	if (unlikely(ELF32_R_TYPE(this_reloc->r_info) != R_PPC_JMP_SLOT)) {
-		_dl_dprintf(2, "%s: Incorrect relocation type in jump relocation\n", _dl_progname);
-		_dl_exit(1);
-	}
-#endif
-
 	/* Address of dump instruction to fix up */
 	reloc_addr = (Elf32_Addr *) (tpnt->loadaddr + this_reloc->r_offset);
 
@@ -186,7 +179,7 @@ unsigned long _dl_linux_resolver(struct elf_resolve *tpnt, int reloc_entry)
 	return finaladdr;
 }
 
-static inline int
+static __inline__ int
 _dl_do_reloc (struct elf_resolve *tpnt,struct dyn_elf *scope,
 	      ELF_RELOC *rpnt, Elf32_Sym *symtab, char *strtab)
 {
@@ -202,7 +195,7 @@ _dl_do_reloc (struct elf_resolve *tpnt,struct dyn_elf *scope,
 #endif
 	reloc_addr   = (Elf32_Addr *)(intptr_t) (tpnt->loadaddr + (unsigned long) rpnt->r_offset);
 	reloc_type   = ELF32_R_TYPE(rpnt->r_info);
-	symbol_addr  = tpnt->loadaddr; /* For R_PPC_RELATIVE */ 
+	symbol_addr  = tpnt->loadaddr; /* For R_PPC_RELATIVE */
 	symtab_index = ELF32_R_SYM(rpnt->r_info);
 	symname      = strtab + symtab[symtab_index].st_name;
 	if (symtab_index) {
@@ -311,7 +304,7 @@ _dl_do_reloc (struct elf_resolve *tpnt,struct dyn_elf *scope,
  out_nocode:
 #if defined (__SUPPORT_LD_DEBUG__)
 	if (_dl_debug_reloc && _dl_debug_detail)
-		_dl_dprintf(_dl_debug_file, "\tpatched: %x ==> %x @ %x", old_val, *reloc_addr, reloc_addr);
+		_dl_dprintf(_dl_debug_file, "\tpatched: %x ==> %x @ %x\n", old_val, *reloc_addr, reloc_addr);
 #endif
 	return 0;
 }
@@ -368,7 +361,7 @@ void _dl_parse_lazy_relocation_information(struct dyn_elf *rpnt,
 	PPC_ISYNC;
 }
 
-static inline int
+static __inline__ int
 _dl_parse(struct elf_resolve *tpnt, struct dyn_elf *scope,
 	  unsigned long rel_addr, unsigned long rel_size,
 	  int (*reloc_fnc) (struct elf_resolve *tpnt, struct dyn_elf *scope,
@@ -386,7 +379,7 @@ _dl_parse(struct elf_resolve *tpnt, struct dyn_elf *scope,
 
 	symtab = (Elf32_Sym *)(intptr_t)tpnt->dynamic_info[DT_SYMTAB];
 	strtab = (char *)tpnt->dynamic_info[DT_STRTAB];
-	
+
 	  for (i = 0; i < rel_size; i++, rpnt++) {
 	        int res;
 

@@ -32,6 +32,8 @@
 
 #include <ldso.h>
 #include <stdio.h>
+#include <string.h> /* Needed for 'strstr' prototype' */
+#include <stdbool.h>
 
 
 #ifdef SHARED
@@ -51,6 +53,7 @@ extern struct elf_resolve *_dl_loaded_modules;
 extern struct r_debug *_dl_debug_addr;
 extern unsigned long _dl_error_number;
 extern void *(*_dl_malloc_function)(size_t);
+extern void (*_dl_free_function) (void *p);
 extern void _dl_run_init_array(struct elf_resolve *);
 extern void _dl_run_fini_array(struct elf_resolve *);
 #ifdef __LDSO_CACHE_SUPPORT__
@@ -67,12 +70,13 @@ extern char *_dl_debug;
 
 #else /* SHARED */
 
+#define _dl_malloc malloc
+#define _dl_free free
+
 /* When libdl is linked as a static library, we need to replace all
  * the symbols that otherwise would have been loaded in from ldso... */
 
 #ifdef __SUPPORT_LD_DEBUG__
-/* Needed for 'strstr' prototype' */
-#include <string.h>
 char *_dl_debug  = 0;
 char *_dl_debug_symbols   = 0;
 char *_dl_debug_move      = 0;
@@ -83,13 +87,15 @@ char *_dl_debug_bindings  = 0;
 int   _dl_debug_file      = 2;
 #endif
 const char *_dl_progname       = "";        /* Program name */
+void *(*_dl_malloc_function)(size_t);
+void (*_dl_free_function) (void *p);
 char *_dl_library_path         = 0;         /* Where we look for libraries */
 char *_dl_ldsopath             = 0;         /* Location of the shared lib loader */
 int _dl_errno                  = 0;         /* We can't use the real errno in ldso */
 size_t _dl_pagesize            = PAGE_SIZE; /* Store the page size for use later */
 /* This global variable is also to communicate with debuggers such as gdb. */
 struct r_debug *_dl_debug_addr = NULL;
-#define _dl_malloc malloc
+
 #include "../ldso/dl-array.c"
 #include "../ldso/dl-debug.c"
 #include LDSO_ELFINTERP
@@ -140,9 +146,11 @@ static const char *dl_error_names[] = {
 void dl_cleanup(void) __attribute__ ((destructor));
 void dl_cleanup(void)
 {
-	struct dyn_elf *d;
-	for (d = _dl_handles; d; d = d->next_handle) {
-		do_dlclose(d, 1);
+	struct dyn_elf *h, *n;
+
+	for (h = _dl_handles; h; h = n) {
+		n = h->next_handle;
+		do_dlclose(h, 1);
 	}
 }
 
@@ -157,6 +165,7 @@ void *dlopen(const char *libname, int flag)
 	struct init_fini_list *tmp, *runp, *runp2, *dep_list;
 	unsigned int nlist, i;
 	struct elf_resolve **init_fini_list;
+	static bool _dl_init;
 
 	/* A bit of sanity checking... */
 	if (!(flag & (RTLD_LAZY|RTLD_NOW))) {
@@ -166,6 +175,11 @@ void *dlopen(const char *libname, int flag)
 
 	from = (ElfW(Addr)) __builtin_return_address(0);
 
+	if (!_dl_init) {
+		_dl_init = true;
+		_dl_malloc_function = malloc;
+		_dl_free_function = free;
+	}
 	/* Cover the trivial case first */
 	if (!libname)
 		return _dl_symbol_tables;
@@ -352,8 +366,8 @@ void *dlopen(const char *libname, int flag)
 			fprintf(stderr, "lib: %s has deps:\n", init_fini_list[i]->libname);
 			runp = init_fini_list[i]->init_fini;
 			for (; runp; runp = runp->next)
-				printf(" %s ", runp->tpnt->libname);
-			printf("\n");
+				fprintf(stderr, " %s ", runp->tpnt->libname);
+			fprintf(stderr, "\n");
 		}
 	}
 #endif
@@ -433,7 +447,22 @@ void *dlsym(void *vhandle, const char *name)
 	ElfW(Addr) from;
 	struct dyn_elf *rpnt;
 	void *ret;
-
+	/* Nastiness to support underscore prefixes.  */
+#ifdef __UCLIBC_UNDERSCORES__
+	char tmp_buf[80];
+	char *name2 = tmp_buf;
+	size_t nlen = strlen (name) + 1;
+	if (nlen + 1 > sizeof (tmp_buf))
+	    name2 = malloc (nlen + 1);
+	if (name2 == 0) {
+	    _dl_error_number = LD_ERROR_MMAP_FAILED;
+	    return 0;
+	}
+	name2[0] = '_';
+	memcpy (name2 + 1, name, nlen);
+#else
+	const char *name2 = name;
+#endif
 	handle = (struct dyn_elf *) vhandle;
 
 	/* First of all verify that we have a real handle
@@ -447,7 +476,8 @@ void *dlsym(void *vhandle, const char *name)
 				break;
 		if (!rpnt) {
 			_dl_error_number = LD_BAD_HANDLE;
-			return NULL;
+			ret = NULL;
+			goto out;
 		}
 	} else if (handle == RTLD_NEXT) {
 		/*
@@ -471,13 +501,18 @@ void *dlsym(void *vhandle, const char *name)
 	tpnt = NULL;
 	if (handle == _dl_symbol_tables)
 	   tpnt = handle->dyn; /* Only search RTLD_GLOBAL objs if global object */
-	ret = _dl_find_hash((char*)name, handle, tpnt, 0);
+	ret = _dl_find_hash(name2, handle, tpnt, ELF_RTYPE_CLASS_DLSYM);
 
 	/*
 	 * Nothing found.
 	 */
 	if (!ret)
 		_dl_error_number = LD_NO_SYMBOL;
+out:
+#ifdef __UCLIBC_UNDERSCORES__
+	if (name2 != tmp_buf)
+		free (name2);
+#endif
 	return ret;
 }
 
@@ -553,8 +588,8 @@ static int do_dlclose(void *vhandle, int need_fini)
 				if (end < ppnt->p_vaddr + ppnt->p_memsz)
 					end = ppnt->p_vaddr + ppnt->p_memsz;
 			}
-			_dl_munmap((void*)tpnt->loadaddr, end);
-			/* Free elements in RTLD_LOCAL scope list */ 
+			DL_LIB_UNMAP (tpnt, end);
+			/* Free elements in RTLD_LOCAL scope list */
 			for (runp = tpnt->rtld_local; runp; runp = tmp) {
 				tmp = runp->next;
 				free(runp);
@@ -679,6 +714,8 @@ int dladdr(const void *__address, Dl_info * __info)
 
 	_dl_if_debug_print("__address: %p  __info: %p\n", __address, __info);
 
+	__address = DL_LOOKUP_ADDRESS (__address);
+
 	for (rpnt = _dl_loaded_modules; rpnt; rpnt = rpnt->next) {
 		struct elf_resolve *tpnt;
 
@@ -707,12 +744,36 @@ int dladdr(const void *__address, Dl_info * __info)
 
 		/* Set the info for the object the address lies in */
 		__info->dli_fname = pelf->libname;
-		__info->dli_fbase = (void *) DL_LOADADDR_BASE(pelf->mapaddr);
+		__info->dli_fbase = (void *)pelf->mapaddr;
 
 		symtab = (ElfW(Sym) *) (pelf->dynamic_info[DT_SYMTAB]);
 		strtab = (char *) (pelf->dynamic_info[DT_STRTAB]);
 
 		sf = sn = 0;
+
+#ifdef __LDSO_GNU_HASH_SUPPORT__
+		if (pelf->l_gnu_bitmask) {
+			for (hn = 0; hn < pelf->nbucket; hn++) {
+				si = pelf->l_gnu_buckets[hn];
+				if (!si)
+					continue;
+
+				const Elf32_Word *hasharr = &pelf->l_gnu_chain_zero[si];
+				do {
+					ElfW(Addr) symbol_addr;
+
+					symbol_addr = (ElfW(Addr)) DL_RELOC_ADDR(pelf->loadaddr, symtab[si].st_value);
+					if (symbol_addr <= (ElfW(Addr))__address && (!sf || sa < symbol_addr)) {
+						sa = symbol_addr;
+						sn = si;
+						sf = 1;
+					}
+					_dl_if_debug_print("Symbol \"%s\" at %p\n", strtab + symtab[si].st_name, symbol_addr);
+					++si;
+				} while ((*hasharr++ & 1u) == 0);
+			}
+		} else
+#endif
 		for (hn = 0; hn < pelf->nbucket; hn++) {
 			for (si = pelf->elf_buckets[hn]; si; si = pelf->chains[si]) {
 				ElfW(Addr) symbol_addr;

@@ -1,9 +1,9 @@
-/* Any assmbly language/system dependent hacks needed to setup boot1.c so it
+/* Any assembly language/system dependent hacks needed to setup boot1.c so it
  * will work as expected and cope with whatever platform specific wierdness is
  * needed for this architecture.
  */
 
-asm("" \
+__asm__("" \
 "	.section .text..SHmedia32,\"ax\"\n"				\
 "	.globl _start\n"						\
 "	.type _start, @function\n"					\

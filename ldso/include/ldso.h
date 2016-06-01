@@ -33,11 +33,25 @@
 /* Pull in the arch specific page size */
 #include <bits/uClibc_page.h>
 /* Pull in the ldso syscalls and string functions */
+#ifndef __ARCH_HAS_NO_SHARED__
 #include <dl-syscall.h>
 #include <dl-string.h>
 /* Now the ldso specific headers */
 #include <dl-elf.h>
 #include <dl-hash.h>
+
+/* common align masks, if not specified by sysdep headers */
+#ifndef ADDR_ALIGN
+#define ADDR_ALIGN (_dl_pagesize - 1)
+#endif
+
+#ifndef PAGE_ALIGN
+#define PAGE_ALIGN (~ADDR_ALIGN)
+#endif
+
+#ifndef OFFS_ALIGN
+#define OFFS_ALIGN (PAGE_ALIGN & ~(1ul << (sizeof(_dl_pagesize) * 8 - 1)))
+#endif
 
 /* For INIT/FINI dependency sorting. */
 struct init_fini_list {
@@ -67,28 +81,62 @@ extern int   _dl_debug_file;
 # define _dl_if_debug_dprint(fmt, args...) \
 	do { if (_dl_debug) __dl_debug_dprint(fmt, ## args); } while (0)
 #else
-# define _dl_debug_dprint(fmt, args...)
-# define _dl_if_debug_dprint(fmt, args...)
+# define __dl_debug_dprint(fmt, args...) do {} while (0)
+# define _dl_if_debug_dprint(fmt, args...) do {} while (0)
 # define _dl_debug_file 2
 #endif /* __SUPPORT_LD_DEBUG__ */
+
+#ifdef IS_IN_rtld
+# ifdef __SUPPORT_LD_DEBUG__
+#  define _dl_assert(expr)						\
+	do {								\
+		if (!(expr)) {						\
+			__dl_debug_dprint("assert(%s)\n", #expr);	\
+			_dl_exit(45);					\
+		}							\
+	} while (0)
+# else
+#  define _dl_assert(expr) ((void)0)
+# endif
+#else
+# include <assert.h>
+# define _dl_assert(expr) assert(expr)
+#endif
 
 #ifdef __SUPPORT_LD_DEBUG_EARLY__
 # define _dl_debug_early(fmt, args...) __dl_debug_dprint(fmt, ## args)
 #else
-# define _dl_debug_early(fmt, args...)
+# define _dl_debug_early(fmt, args...) do {} while (0)
 #endif /* __SUPPORT_LD_DEBUG_EARLY__ */
 
 #ifndef NULL
 #define NULL ((void *) 0)
 #endif
 
-extern void *_dl_malloc(int size);
+extern void *_dl_malloc(size_t size);
+extern void _dl_free(void *);
 extern char *_dl_getenv(const char *symbol, char **envp);
 extern void _dl_unsetenv(const char *symbol, char **envp);
 extern char *_dl_strdup(const char *string);
 extern void _dl_dprintf(int, const char *, ...);
 
+#ifndef DL_GET_READY_TO_RUN_EXTRA_PARMS
+# define DL_GET_READY_TO_RUN_EXTRA_PARMS
+#endif
+#ifndef DL_GET_READY_TO_RUN_EXTRA_ARGS
+# define DL_GET_READY_TO_RUN_EXTRA_ARGS
+#endif
+
 extern void _dl_get_ready_to_run(struct elf_resolve *tpnt, DL_LOADADDR_TYPE load_addr,
-                                 ElfW(auxv_t) auxvt[AT_EGID + 1], char **envp, char **argv);
+		ElfW(auxv_t) auxvt[AT_EGID + 1], char **envp, char **argv
+		DL_GET_READY_TO_RUN_EXTRA_PARMS);
+
+#ifdef HAVE_DL_INLINES_H
+#include <dl-inlines.h>
+#endif
+
+#else /* __ARCH_HAS_NO_SHARED__ */
+#include <dl-defs.h>
+#endif
 
 #endif /* _LDSO_H_ */

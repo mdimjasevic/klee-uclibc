@@ -111,6 +111,9 @@ Arch specific TODO:
   arm:
     update crt1 code again for nommu (http://bugs.uclibc.org/view.php?id=538)
     recruit jbowler and integrate thumb support
+  frv:
+    needs to be updated for the new ldso changes and unification of the
+    uClibc_main funcs (__uClibc_start_main doesnt exist anymore)
   hppa:
     errno.c test segfaults causes segfault in clone.S (seems to be in glibc too)
   i386:
@@ -119,16 +122,15 @@ Arch specific TODO:
     ldso is not implemented
   m68k:
     ldso lazy relocation doesnt work
+  sh64:
+    ldso is reasonably broken, presently requiring additional
+    coaxing/threatening.
   sparc:
     need a sigaction.c since common one doesnt work (signal tests)
     ldso needs to be updated since it's totally broken atm
   vax:
     pthread support, linktime warning support (implies GAS patches),
     general touchups, testing, ldso.
-  frv sh64:
-    need to be updated to new ldso changes and unification of the
-     two uClibc_main funcs (__uClibc_start_main doesnt exist anymore)
-
 
 
 -----------------------------------------------------------------------------
@@ -143,6 +145,11 @@ Manuel's todo:
   d) Implement glibc 'a' flag for scanf string conversions.
   e) Allow use of the older non-table-based ctype functions when using
      stub locale support. (smaller)
+  f) __drand48_iterate should be void
+  g) alphasort vs. versionsort. The former seems to be SVID, the latter GNU
+     i.e. reverse to what we currently do. The latter is unimplemented.
+  h) ponder removal/configs to turn off: __xpg_*, bsd_signal, dysize,
+     getw/putw, utimes,
 
   2) Additional str{f|p}time issues.
   ----------------------------------

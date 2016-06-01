@@ -39,7 +39,7 @@
 
 #else  /* __UCLIBC_HAS_LOCALE__ */
 
-#define __LOCALE_C_ONLY 
+#define __LOCALE_C_ONLY
 
 #define __XL_NPP(N) N
 #define __LOCALE_PARAM
@@ -74,7 +74,7 @@
 /**********************************************************************/
 #ifndef __LOCALE_C_ONLY
 
-#if defined _LIBC /* && (defined IS_IN_libc || defined NOT_IN_libc) */
+#if defined _LIBC || defined __UCLIBC_GEN_LOCALE /* && (defined IS_IN_libc || defined NOT_IN_libc) */
 #include <stddef.h>
 #include <stdint.h>
 #include <bits/uClibc_touplow.h>
@@ -107,7 +107,7 @@ enum {
   * In particular, C/POSIX locale is '#' + "\x80\x01"}*LC_ALL + nul.
   */
 
-#if defined _LIBC && !defined __UCLIBC_GEN_LOCALE /* && (defined IS_IN_libc || defined NOT_IN_libc) */
+#if defined _LIBC || defined __UCLIBC_GEN_LOCALE /* && (defined IS_IN_libc || defined NOT_IN_libc) */
 typedef struct {
 	uint16_t num_weights;
 	uint16_t num_starters;

@@ -192,8 +192,11 @@ DL_START(unsigned long args)
 	 * we can take advantage of the magic offset register, if we
 	 * happen to know what that is for this architecture.  If not,
 	 * we can always read stuff out of the ELF file to find it... */
-	got = elf_machine_dynamic();
-	dpnt = (ElfW(Dyn) *) DL_RELOC_ADDR(load_addr, got);
+	DL_BOOT_COMPUTE_GOT(got);
+
+	/* Now, finally, fix up the location of the dynamic stuff */
+	DL_BOOT_COMPUTE_DYN (dpnt, got, load_addr);
+
 	SEND_EARLY_STDERR_DEBUG("First Dynamic section entry=");
 	SEND_ADDRESS_STDERR_DEBUG(dpnt, 1);
 	_dl_memset(tpnt, 0, sizeof(struct elf_resolve));
@@ -217,7 +220,9 @@ DL_START(unsigned long args)
 	/* some arches (like MIPS) we have to tweak the GOT before relocations */
 	PERFORM_BOOTSTRAP_GOT(tpnt);
 
-#else
+#endif
+
+#if !defined(PERFORM_BOOTSTRAP_GOT) || defined(__avr32__)
 
 	/* OK, now do the relocations.  We do not do a lazy binding here, so
 	   that once we are done, we have considerably more flexibility. */
@@ -279,8 +284,9 @@ DL_START(unsigned long args)
 					SEND_STDERR_DEBUG(strtab + sym->st_name);
 					SEND_STDERR_DEBUG("\n");
 #endif
-				} else
+				} else {
 					SEND_STDERR_DEBUG("relocating unknown symbol\n");
+				}
 				/* Use this machine-specific macro to perform the actual relocation.  */
 				PERFORM_BOOTSTRAP_RELOC(rpnt, reloc_addr, symbol_addr, load_addr, sym);
 			}
@@ -302,7 +308,8 @@ DL_START(unsigned long args)
 
 	__rtld_stack_end = (void *)(argv - 1);
 
-	_dl_get_ready_to_run(tpnt, load_addr, auxvt, envp, argv);
+	_dl_get_ready_to_run(tpnt, load_addr, auxvt, envp, argv
+			     DL_GET_READY_TO_RUN_EXTRA_ARGS);
 
 
 	/* Transfer control to the application.  */

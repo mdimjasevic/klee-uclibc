@@ -66,7 +66,7 @@
 #include <crypt.h>
 #include "libcrypt.h"
 
-/* Re-entrantify me -- all this junk needs to be in 
+/* Re-entrantify me -- all this junk needs to be in
  * struct crypt_data to make this really reentrant... */
 static u_char	inv_key_perm[64];
 static u_char	inv_comp_perm[56];
@@ -82,8 +82,8 @@ static u_int32_t old_salt;
 static u_int32_t old_rawkey0, old_rawkey1;
 
 
-/* Static stuff that stays resident and doesn't change after 
- * being initialized, and therefore doesn't need to be made 
+/* Static stuff that stays resident and doesn't change after
+ * being initialized, and therefore doesn't need to be made
  * reentrant. */
 static u_char	init_perm[64], final_perm[64];
 static u_char	m_sbox[4][4096];
@@ -195,7 +195,7 @@ static const u_int32_t bits32[32] =
 static const u_char	bits8[8] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
 
 
-static int 
+static int
 ascii_to_bin(char ch)
 {
 	if (ch > 'z')
@@ -372,7 +372,7 @@ setup_salt(u_int32_t salt)
 }
 
 
-static int
+static void
 des_setkey(const char *key)
 {
 	u_int32_t	k0, k1, rawkey0, rawkey1;
@@ -392,7 +392,7 @@ des_setkey(const char *key)
 		 * has bad parity anyway) in order to simplify the starting
 		 * conditions.
 		 */
-		return(0);
+		return;
 	}
 	old_rawkey0 = rawkey0;
 	old_rawkey1 = rawkey1;
@@ -448,7 +448,6 @@ des_setkey(const char *key)
 				| comp_maskr[6][(t1 >> 7) & 0x7f]
 				| comp_maskr[7][t1 & 0x7f];
 	}
-	return(0);
 }
 
 
@@ -658,8 +657,7 @@ char *__des_crypt(const unsigned char *key, const unsigned char *setting)
 		if (*(q - 1))
 			key++;
 	}
-	if (des_setkey((char *)keybuf))
-		return(NULL);
+	des_setkey((char *)keybuf);
 
 #if 0
 	if (*setting == _PASSWORD_EFMT1) {
@@ -688,8 +686,7 @@ char *__des_crypt(const unsigned char *key, const unsigned char *setting)
 			while (q - (u_char *)keybuf - 8 && *key)
 				*q++ ^= *key++ << 1;
 
-			if (des_setkey((char *)keybuf))
-				return(NULL);
+			des_setkey((char *)keybuf);
 		}
 		strncpy(output, setting, 9);
 
@@ -702,7 +699,7 @@ char *__des_crypt(const unsigned char *key, const unsigned char *setting)
 		 */
 		output[9] = '\0';
 		p = (u_char *)output + strlen(output);
-	} else 
+	} else
 #endif
 	{
 		/*

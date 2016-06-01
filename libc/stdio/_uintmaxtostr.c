@@ -11,7 +11,7 @@
 #include <locale.h>
 #include <bits/uClibc_uintmaxtostr.h>
 
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 
 /* Avoid using long long / and % operations to cut down dependencies on
  * libgcc.a.  Definitely helps on i386 at least. */
@@ -129,7 +129,7 @@ char attribute_hidden *_uintmaxtostr(register char * __restrict bufend, uintmax_
 			digit = low % base;
 			low /= base;
 		}
-		
+
 #ifndef __LOCALE_C_ONLY
 		if (unlikely(outdigit)) {
 			bufend -= __UCLIBC_CURLOCALE_DATA.outdigit_length[digit];

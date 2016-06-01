@@ -10,8 +10,8 @@
 #ifdef __USE_GNU
 #include "_stdio.h"
 
-libc_hidden_proto(memcpy)
-libc_hidden_proto(memset)
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(memset) */
 libc_hidden_proto(fopencookie)
 
 #ifndef __UCLIBC_HAS_GLIBC_CUSTOM_STREAMS__
@@ -97,7 +97,7 @@ static int oms_seek(register void *cookie, __offmax_t *pos, int whence)
 		if (buf) {
 			*COOKIE->bufloc = COOKIE->buf = buf;
 			COOKIE->len = leastlen;
-			memset(buf + COOKIE->eof, leastlen - COOKIE->eof, 0); /* 0-fill */
+			memset(buf + COOKIE->eof, 0, leastlen - COOKIE->eof); /* 0-fill */
 		} else {
 			/* TODO: check glibc errno setting... */
 			return -1;
@@ -107,7 +107,7 @@ static int oms_seek(register void *cookie, __offmax_t *pos, int whence)
 	*pos = COOKIE->pos = --leastlen;
 
 	if (leastlen > COOKIE->eof) {
-		memset(COOKIE->buf + COOKIE->eof, leastlen - COOKIE->eof, 0);
+		memset(COOKIE->buf + COOKIE->eof, 0, leastlen - COOKIE->eof);
 		*COOKIE->sizeloc = COOKIE->eof;
 	}
 
@@ -144,7 +144,7 @@ FILE *open_memstream(char **__restrict bufloc, size_t *__restrict sizeloc)
 		*cookie->buf = 0;		/* Set nul terminator for buffer. */
 		*(cookie->bufloc = bufloc) = cookie->buf;
 		*(cookie->sizeloc = sizeloc) = cookie->eof = cookie->pos = 0;
-		
+
 #ifndef __BCC__
 		fp = fopencookie(cookie, "w", _oms_io_funcs);
 #else
@@ -160,9 +160,7 @@ FILE *open_memstream(char **__restrict bufloc, size_t *__restrict sizeloc)
 		}
 	}
 
-	if (cookie->buf != NULL) {
-		free(cookie->buf);
-	}
+	free(cookie->buf);
  EXIT_cookie:
 	free(cookie);
 

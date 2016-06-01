@@ -10,8 +10,8 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#if defined __NR_osf_fdatasync
+#if !defined __NR_fdatasync && defined __NR_osf_fdatasync
 # define __NR_fdatasync __NR_osf_fdatasync
 #endif
 
-_syscall1(int, fdatasync, int, fd);
+_syscall1(int, fdatasync, int, fd)

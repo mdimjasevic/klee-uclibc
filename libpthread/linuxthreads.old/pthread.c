@@ -371,8 +371,8 @@ struct pthread_functions __pthread_functions =
     .ptr__pthread_cleanup_push = _pthread_cleanup_push,
     .ptr__pthread_cleanup_pop = _pthread_cleanup_pop
 */
-    .ptr__pthread_cleanup_push_defer = _pthread_cleanup_push_defer,
-    .ptr__pthread_cleanup_pop_restore = _pthread_cleanup_pop_restore,
+    .ptr__pthread_cleanup_push_defer = __pthread_cleanup_push_defer,
+    .ptr__pthread_cleanup_pop_restore = __pthread_cleanup_pop_restore,
   };
 #ifdef SHARED
 # define ptr_pthread_functions &__pthread_functions
@@ -386,7 +386,7 @@ static int *__libc_multiple_threads_ptr;
     startup of the C library.  */
 void __pthread_initialize_minimal(void)
 {
-    /* If we have special thread_self processing, initialize 
+    /* If we have special thread_self processing, initialize
      * that for the main thread now.  */
 #ifdef INIT_THREAD_SELF
     INIT_THREAD_SELF(&__pthread_initial_thread, 0);
@@ -434,7 +434,7 @@ static void pthread_initialize(void)
 
  {			   /* uClibc-specific stdio initialization for threads. */
 	 FILE *fp;
-	 
+
 	 _stdio_user_locking = 0;	/* 2 if threading not initialized */
 	 for (fp = _stdio_openlist; fp != NULL; fp = fp->__nextopen) {
 		 if (fp->__user_locking != 1) {
@@ -458,7 +458,7 @@ static void pthread_initialize(void)
   }
 #else
   /* For non-MMU assume __pthread_initial_thread_tos at upper page boundary, and
-   * __pthread_initial_thread_bos at address 0. These bounds are refined as we 
+   * __pthread_initial_thread_bos at address 0. These bounds are refined as we
    * malloc other stack frames such that they don't overlap. -StS
    */
   __pthread_initial_thread_tos =
@@ -477,12 +477,12 @@ static void pthread_initialize(void)
   __libc_sigaction(__pthread_sig_restart, &sa, NULL);
   sa.sa_handler = pthread_handle_sigcancel;
   sigaddset(&sa.sa_mask, __pthread_sig_restart);
-  // sa.sa_flags = 0;
+  /* sa.sa_flags = 0; */
   __libc_sigaction(__pthread_sig_cancel, &sa, NULL);
   if (__pthread_sig_debug > 0) {
       sa.sa_handler = pthread_handle_sigdebug;
       sigemptyset(&sa.sa_mask);
-      // sa.sa_flags = 0;
+      /* sa.sa_flags = 0; */
       __libc_sigaction(__pthread_sig_debug, &sa, NULL);
   }
   /* Initially, block __pthread_sig_restart. Will be unblocked on demand. */
@@ -530,7 +530,7 @@ int __pthread_initialize_manager(void)
 	 __pthread_manager_thread_bos, __pthread_manager_thread_tos);
 #if 0
   PDEBUG("initial stack: estimate bos=%p, tos=%p\n",
-  	 __pthread_initial_thread_bos, __pthread_initial_thread_tos);
+	 __pthread_initial_thread_bos, __pthread_initial_thread_tos);
 #endif
 
   /* Setup pipe to communicate with thread manager */
@@ -674,7 +674,7 @@ pthread_t pthread_self(void)
   return THREAD_GETMEM(self, p_tid);
 }
 libpthread_hidden_def (pthread_self)
-    
+
 int pthread_equal(pthread_t thread1, pthread_t thread2)
 {
   return thread1 == thread2;
@@ -685,7 +685,7 @@ libpthread_hidden_def (pthread_equal)
 
 #ifndef THREAD_SELF
 
-pthread_descr __pthread_find_self()
+pthread_descr __pthread_find_self(void)
 {
   char * sp = CURRENT_STACK_FRAME;
   pthread_handle h;
@@ -820,7 +820,7 @@ static void pthread_handle_sigcancel(int sig)
 {
   pthread_descr self = thread_self();
   sigjmp_buf * jmpbuf;
-  
+
 
   if (self == &__pthread_manager_thread)
     {
@@ -890,7 +890,7 @@ static void pthread_handle_sigdebug(int sig attribute_unused)
    Notice that we can't free the stack segments, as the forked thread
    may hold pointers into them. */
 
-void __pthread_reset_main_thread()
+void __pthread_reset_main_thread(void)
 {
   pthread_descr self = thread_self();
 

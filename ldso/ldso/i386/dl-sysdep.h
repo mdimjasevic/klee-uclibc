@@ -1,6 +1,6 @@
 /* vi: set sw=4 ts=4: */
 /*
- * Various assmbly language/system dependent  hacks that are required
+ * Various assembly language/system dependent hacks that are required
  * so that we can minimize the amount of platform specific code.
  * Copyright (C) 2000-2004 by Erik Andersen <andersen@codepoet.org>
  */
@@ -25,11 +25,6 @@ do {														\
 struct elf_resolve;
 extern unsigned long _dl_linux_resolver(struct elf_resolve * tpnt, int reloc_entry);
 
-/* 4096 bytes alignment */
-#define PAGE_ALIGN 0xfffff000
-#define ADDR_ALIGN 0xfff
-#define OFFS_ALIGN 0x7ffff000
-
 /* ELF_RTYPE_CLASS_PLT iff TYPE describes relocation of a PLT entry or
    TLS variable, so undefined references should not be allowed to
    define the value.
@@ -42,8 +37,8 @@ extern unsigned long _dl_linux_resolver(struct elf_resolve * tpnt, int reloc_ent
 /* Return the link-time address of _DYNAMIC.  Conveniently, this is the
    first element of the GOT.  This must be inlined in a function which
    uses global data.  */
-static inline Elf32_Addr elf_machine_dynamic (void) attribute_unused;
-static inline Elf32_Addr
+static __always_inline Elf32_Addr elf_machine_dynamic (void) attribute_unused;
+static __always_inline Elf32_Addr
 elf_machine_dynamic (void)
 {
 	register Elf32_Addr *got __asm__ ("%ebx");
@@ -52,14 +47,13 @@ elf_machine_dynamic (void)
 
 
 /* Return the run-time load address of the shared object.  */
-static inline Elf32_Addr elf_machine_load_address (void) attribute_unused;
-static inline Elf32_Addr
+static __always_inline Elf32_Addr elf_machine_load_address (void) attribute_unused;
+static __always_inline Elf32_Addr
 elf_machine_load_address (void)
 {
 	/* It doesn't matter what variable this is, the reference never makes
 	   it to assembly.  We need a dummy reference to some global variable
 	   via the GOT to make sure the compiler initialized %ebx in time.  */
-	extern int _dl_errno;
 	Elf32_Addr addr;
 	__asm__ ("leal _dl_start@GOTOFF(%%ebx), %0\n"
 	     "subl _dl_start@GOT(%%ebx), %0"
@@ -67,7 +61,7 @@ elf_machine_load_address (void)
 	return addr;
 }
 
-static inline void
+static __always_inline void
 elf_machine_relative (Elf32_Addr load_off, const Elf32_Addr rel_addr,
 		      Elf32_Word relative_count)
 {

@@ -133,7 +133,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include <strings.h>
 #include <time.h>
 #include <sys/time.h>
 #include <limits.h>
@@ -161,12 +160,12 @@ libc_hidden_proto(ctime)
 libc_hidden_proto(localtime)
 libc_hidden_proto(localtime_r)
 
-libc_hidden_proto(memset)
-libc_hidden_proto(memcpy)
-libc_hidden_proto(strcmp)
-libc_hidden_proto(strcpy)
-libc_hidden_proto(strlen)
-libc_hidden_proto(strncpy)
+/* Experimentally off - libc_hidden_proto(memset) */
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(strcmp) */
+/* Experimentally off - libc_hidden_proto(strcpy) */
+/* Experimentally off - libc_hidden_proto(strlen) */
+/* Experimentally off - libc_hidden_proto(strncpy) */
 /* libc_hidden_proto(sprintf) */
 libc_hidden_proto(open)
 libc_hidden_proto(read)
@@ -174,18 +173,18 @@ libc_hidden_proto(close)
 libc_hidden_proto(getenv)
 libc_hidden_proto(tzset)
 libc_hidden_proto(gettimeofday)
-libc_hidden_proto(strncasecmp)
+/* Experimentally off - libc_hidden_proto(strncasecmp) */
 libc_hidden_proto(strtol)
 libc_hidden_proto(strtoul)
 libc_hidden_proto(nl_langinfo)
 
 #ifdef __UCLIBC_HAS_XLOCALE__
-libc_hidden_proto(strncasecmp_l)
+/* Experimentally off - libc_hidden_proto(strncasecmp_l) */
 libc_hidden_proto(strtol_l)
 libc_hidden_proto(strtoul_l)
 libc_hidden_proto(nl_langinfo_l)
 libc_hidden_proto(__ctype_b_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 #endif
 
@@ -202,14 +201,13 @@ libc_hidden_proto(__ctype_b)
     ((defined(L_strftime) || defined(L_strftime_l)) && \
     defined(__UCLIBC_HAS_XLOCALE__))
 
-void _time_tzset(int use_old_rules);
-libc_hidden_proto(_time_tzset)
+void _time_tzset(int use_old_rules) attribute_hidden;
 
 #ifndef L__time_mktime
 
  /* Jan 1, 2007 Z - tm = 0,0,0,1,0,107,1,0,0 */
 
-const static time_t new_rule_starts = 1167609600;
+static const time_t new_rule_starts = 1167609600;
 
 #endif
 #endif
@@ -533,7 +531,7 @@ double difftime(time_t time1, time_t time0)
 #if (LONG_MAX >> DBL_MANT_DIG) == 0
 
 	/* time_t fits in the mantissa of a double. */
-	return ((double) time1) - time0;
+	return (double)time1 - (double)time0;
 
 #elif ((LONG_MAX >> DBL_MANT_DIG) >> DBL_MANT_DIG) == 0
 
@@ -620,7 +618,7 @@ libc_hidden_def(localtime_r)
 
 #ifdef __UCLIBC_HAS_TM_EXTENSIONS__
 
-libc_hidden_proto(strnlen)
+/* Experimentally off - libc_hidden_proto(strnlen) */
 
 struct ll_tzname_item;
 
@@ -674,7 +672,7 @@ static int tm_isdst(register const struct tm *__restrict ptm,
 {
 	long sec;
 	int i, isdst, isleap, day, day0, monlen, mday;
-	int oday;					/* Note: oday can be uninitialized. */
+	int oday = oday; /* ok to be uninitialized, shutting up compiler warning */
 
 	isdst = 0;
 	if (r[1].tzname[0] != 0) {
@@ -1826,7 +1824,7 @@ static const char *getnumber(register const char *e, int *pn)
 #ifdef __UCLIBC_HAS_TZ_FILE__
 
 #ifndef __UCLIBC_HAS_TZ_FILE_READ_MANY__
-static int TZ_file_read;		/* Let BSS initialization set this to 0. */
+static smallint TZ_file_read;		/* Let BSS initialization set this to 0. */
 #endif /* __UCLIBC_HAS_TZ_FILE_READ_MANY__ */
 
 static char *read_TZ_file(char *buf)
@@ -1854,7 +1852,7 @@ static char *read_TZ_file(char *buf)
 			p[-1] = 0;
 			p = buf;
 #ifndef __UCLIBC_HAS_TZ_FILE_READ_MANY__
-			++TZ_file_read;
+			TZ_file_read = 1;
 #endif /* __UCLIBC_HAS_TZ_FILE_READ_MANY__ */
 		} else {
 ERROR:
@@ -1880,7 +1878,7 @@ void _time_tzset(int use_old_rules)
 {
 	register const char *e;
 	register char *s;
-	long off;
+	long off = 0;
 	short *p;
 	rule_struct new_rules[2];
 	int n, count, f;
@@ -1902,7 +1900,7 @@ void _time_tzset(int use_old_rules)
 
 	if (e != NULL) {
 		TZ_file_read = 0;		/* Reset if the TZ env var is set. */
-	} else if (TZ_file_read > 0) {
+	} else if (TZ_file_read) {
 		goto FAST_DONE;
 	}
 #endif /* defined(__UCLIBC_HAS_TZ_FILE__) && !defined(__UCLIBC_HAS_TZ_FILE_READ_MANY__) */
@@ -2090,7 +2088,6 @@ libc_hidden_def(tzset)
 #endif
 
 #include <utime.h>
-#include <sys/time.h>
 
 int utimes(const char *filename, register const struct timeval *tvp)
 {
@@ -2134,7 +2131,7 @@ struct tm attribute_hidden *_time_t2tm(const time_t *__restrict timer,
 {
 	register int *p;
 	time_t t1, t, v;
-	int wday;					/* Note: wday can be uninitialized. */
+	int wday = wday; /* ok to be uninitialized, shutting up warning */
 
 	{
 		register const uint16_t *vp;

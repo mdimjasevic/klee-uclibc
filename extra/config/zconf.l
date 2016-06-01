@@ -1,5 +1,6 @@
 %option backup nostdinit noyywrap never-interactive full ecs
 %option 8bit backup nodefault perf-report perf-report
+%option noinput
 %x COMMAND HELP STRING PARAM
 %{
 /*
@@ -217,6 +218,11 @@ n	[A-Za-z0-9_]
 		append_string("\n", 1);
 	}
 	[^ \t\n].* {
+		while (yyleng) {
+			if ((yytext[yyleng-1] != ' ') && (yytext[yyleng-1] != '\t'))
+				break;
+			yyleng--;
+		}
 		append_string(yytext, yyleng);
 		if (!first_ts)
 			first_ts = last_ts;
@@ -265,7 +271,7 @@ FILE *zconf_fopen(const char *name)
 	FILE *f;
 
 	f = fopen(name, "r");
-	if (!f && name[0] != '/') {
+	if (!f && name != NULL && name[0] != '/') {
 		env = getenv(SRCTREE);
 		if (env) {
 			sprintf(fullname, "%s/%s", env, name);

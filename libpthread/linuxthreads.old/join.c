@@ -77,7 +77,7 @@ void __pthread_do_exit(void *retval, char *currentframe)
   THREAD_SETMEM(self, p_terminated, 1);
   /* See if someone is joining on us */
   joining = THREAD_GETMEM(self, p_joining);
-  PDEBUG("joining = %p, pid=%d\n", joining, joining->p_pid);
+  PDEBUG("joining = %p, pid=%d\n", joining, joining ? joining->p_pid : 0);
   __pthread_unlock(THREAD_GETMEM(self, p_lock));
   /* Restart joining thread if any */
   if (joining != NULL) restart(joining);
@@ -151,7 +151,7 @@ int pthread_join(pthread_t thread_id, void ** thread_return)
   /* If not terminated yet, suspend ourselves. */
   if (! th->p_terminated) {
     /* Register extrication interface */
-    __pthread_set_own_extricate_if(self, &extr); 
+    __pthread_set_own_extricate_if(self, &extr);
     if (!(THREAD_GETMEM(self, p_canceled)
 	&& THREAD_GETMEM(self, p_cancelstate) == PTHREAD_CANCEL_ENABLE))
       th->p_joining = self;
@@ -160,7 +160,7 @@ int pthread_join(pthread_t thread_id, void ** thread_return)
     __pthread_unlock(&handle->h_lock);
 
     if (already_canceled) {
-      __pthread_set_own_extricate_if(self, 0); 
+      __pthread_set_own_extricate_if(self, 0);
       __pthread_do_exit(PTHREAD_CANCELED, CURRENT_STACK_FRAME);
     }
 
@@ -168,7 +168,7 @@ int pthread_join(pthread_t thread_id, void ** thread_return)
     suspend(self);
   PDEBUG("after suspend\n");
     /* Deregister extrication interface */
-    __pthread_set_own_extricate_if(self, 0); 
+    __pthread_set_own_extricate_if(self, 0);
 
     /* This is a cancellation point */
     if (THREAD_GETMEM(self, p_woken_by_cancel)

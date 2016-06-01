@@ -19,13 +19,13 @@ libc_hidden_proto(setreuid)
 #  define __NR_setreuid __NR_setreuid32
 # endif
 
-_syscall2(int, setreuid, uid_t, ruid, uid_t, euid);
+_syscall2(int, setreuid, uid_t, ruid, uid_t, euid)
 
 #else
 
 # define __NR___syscall_setreuid __NR_setreuid
-static inline _syscall2(int, __syscall_setreuid,
-		__kernel_uid_t, ruid, __kernel_uid_t, euid);
+static __inline__ _syscall2(int, __syscall_setreuid,
+		__kernel_uid_t, ruid, __kernel_uid_t, euid)
 
 int setreuid(uid_t ruid, uid_t euid)
 {

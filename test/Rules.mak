@@ -39,6 +39,7 @@ TARGET_ARCH:=$(shell $(CC) -dumpmachine | sed -e s'/-.*//' \
 	-e 's/sh[234]/sh/' \
 	-e 's/mips.*/mips/' \
 	-e 's/cris.*/cris/' \
+	-e 's/xtensa.*/xtensa/' \
 	)
 endif
 export TARGET_ARCH
@@ -57,6 +58,7 @@ export TARGET_ARCH
 CROSS      = $(subst ",, $(strip $(CROSS_COMPILER_PREFIX)))
 CC         = $(CROSS)gcc
 RM         = rm -f
+RM_R       = $(RM) -r
 
 # Select the compiler needed to build binaries for your development system
 HOSTCC     = gcc
@@ -78,7 +80,11 @@ endif
 XWARNINGS      := $(subst ",, $(strip $(WARNINGS))) -Wstrict-prototypes
 XARCH_CFLAGS   := $(subst ",, $(strip $(ARCH_CFLAGS))) $(CPU_CFLAGS)
 XCOMMON_CFLAGS := -D_GNU_SOURCE -I$(top_builddir)test
-CFLAGS         += $(XWARNINGS) $(OPTIMIZATION) $(XCOMMON_CFLAGS) $(XARCH_CFLAGS) -I$(top_builddir)include $(PTINC)
+CFLAGS         := $(XWARNINGS) $(OPTIMIZATION) $(XCOMMON_CFLAGS) $(XARCH_CFLAGS) -nostdinc -I$(top_builddir)$(LOCAL_INSTALL_PATH)/usr/include
+
+CC_IPREFIX:=$(shell $(CC) --print-file-name=include)
+CFLAGS += -I$(dir $(CC_IPREFIX))/include-fixed -I$(CC_IPREFIX)
+
 HOST_CFLAGS    += $(XWARNINGS) $(OPTIMIZATION) $(XCOMMON_CFLAGS)
 
 LDFLAGS        := $(CPU_LDFLAGS)
@@ -96,15 +102,21 @@ ifneq ($(strip $(HAVE_SHARED)),y)
 	LDFLAGS       += -static
 	HOST_LDFLAGS  += -static
 endif
+
 LDFLAGS += -B$(top_builddir)lib -Wl,-rpath,$(top_builddir)lib -Wl,-rpath-link,$(top_builddir)lib
 UCLIBC_LDSO_ABSPATH=$(shell pwd)
 ifdef TEST_INSTALLED_UCLIBC
 LDFLAGS += -Wl,-rpath,./
-UCLIBC_LDSO_ABSPATH=/lib
+UCLIBC_LDSO_ABSPATH=$(SHARED_LIB_LOADER_PREFIX)
 endif
 
 ifeq ($(findstring -static,$(LDFLAGS)),)
 	LDFLAGS += -Wl,--dynamic-linker,$(UCLIBC_LDSO_ABSPATH)/$(UCLIBC_LDSO)
+endif
+
+ifeq ($(LDSO_GNU_HASH_SUPPORT),y)
+# Check for binutils support is done on root Rules.mak
+LDFLAGS += -Wl,${LDFLAGS_GNUHASH}
 endif
 
 

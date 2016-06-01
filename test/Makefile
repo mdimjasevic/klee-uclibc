@@ -26,14 +26,24 @@ endif
 ifneq ($(UCLIBC_HAS_REGEX),y)
 	DIRS := $(filter-out regex,$(DIRS))
 endif
-DIRS := $(filter-out math,$(DIRS))
-
+ifneq ($(UCLIBC_HAS_WCHAR),y)
+	DIRS := $(filter-out locale-mbwc,$(DIRS))
+endif
+ifneq ($(UCLIBC_HAS_LOCALE),y)
+	DIRS := $(filter-out locale,$(DIRS))
+endif
+ifeq ($(UCLIBC_HAS_CRYPT_STUB),y)
+	DIRS := $(filter-out crypt,$(DIRS))
+endif
+ifeq ($(HAS_NO_THREADS),y)
+	DIRS := $(filter-out pthread,$(DIRS))
+endif
 
 test check all: run
 
-run: compile subdirs_run
+run: subdirs_run
 
-compile:subdirs_compile
+compile: subdirs_compile
 
 tags:
 	ctags -R

@@ -9,7 +9,7 @@
 
 #ifdef __USE_GNU
 
-libc_hidden_proto(memrchr)
+/* Experimentally off - libc_hidden_proto(memrchr) */
 
 void *memrchr(const void *s, int c, size_t n)
 {
@@ -20,7 +20,7 @@ void *memrchr(const void *s, int c, size_t n)
 #else
 #define np n
 #endif
-	
+
 	r = ((unsigned char *)s) + ((size_t) np);
 
 	while (np) {

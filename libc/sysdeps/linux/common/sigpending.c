@@ -8,17 +8,20 @@
  */
 
 #include <sys/syscall.h>
+
+#if defined __USE_POSIX
 #include <signal.h>
 #undef sigpending
 
 #ifdef __NR_rt_sigpending
 # define __NR___rt_sigpending __NR_rt_sigpending
-static inline _syscall2(int, __rt_sigpending, sigset_t *, set, size_t, size);
+static __inline__ _syscall2(int, __rt_sigpending, sigset_t *, set, size_t, size)
 
 int sigpending(sigset_t * set)
 {
 	return __rt_sigpending(set, _NSIG / 8);
 }
 #else
-_syscall1(int, sigpending, sigset_t *, set);
+_syscall1(int, sigpending, sigset_t *, set)
+#endif
 #endif

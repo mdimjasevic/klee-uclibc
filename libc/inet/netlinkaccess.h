@@ -23,18 +23,11 @@
 #include <stdint.h>
 #include <linux/types.h>
 
+#include <unistd.h>
+
+#if defined __ASSUME_NETLINK_SUPPORT || defined __UCLIBC_USE_NETLINK__
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
-
-/* Should prob be a configure option or something */
-#ifndef __ASSUME_NETLINK_SUPPORT
-#ifdef __UCLIBC_USE_NETLINK__
-# define __ASSUME_NETLINK_SUPPORT 1
-#else
-# define __ASSUME_NETLINK_SUPPORT 0
-#endif
-#endif
-
 
 struct netlink_res
 {
@@ -55,19 +48,17 @@ struct netlink_handle
 };
 
 
-#if 0 /* unused code */
-#if __ASSUME_NETLINK_SUPPORT == 0
-extern int __no_netlink_support attribute_hidden;
-#else
-# define __no_netlink_support 0
+#ifndef __ASSUME_NETLINK_SUPPORT
+#define __ASSUME_NETLINK_SUPPORT 1
 #endif
-#endif /* unused code */
-
 
 extern int __netlink_open (struct netlink_handle *h) attribute_hidden;
 extern void __netlink_close (struct netlink_handle *h) attribute_hidden;
 extern void __netlink_free_handle (struct netlink_handle *h) attribute_hidden;
 extern int __netlink_request (struct netlink_handle *h, int type) attribute_hidden;
 
+#else
+#define __ASSUME_NETLINK_SUPPORT 0
+#endif
 
-#endif /* netlinkaccess.h */
+#endif /* _NETLINKACCESS_H */

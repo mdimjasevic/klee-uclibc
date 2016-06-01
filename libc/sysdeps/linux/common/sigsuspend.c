@@ -8,13 +8,15 @@
  */
 
 #include <sys/syscall.h>
+
+#if defined __USE_POSIX
 #include <signal.h>
 
 extern __typeof(sigsuspend) __libc_sigsuspend;
 
 #ifdef __NR_rt_sigsuspend
 # define __NR___rt_sigsuspend __NR_rt_sigsuspend
-static inline _syscall2(int, __rt_sigsuspend, const sigset_t *, mask, size_t, size);
+static __inline__ _syscall2(int, __rt_sigsuspend, const sigset_t *, mask, size_t, size)
 
 int __libc_sigsuspend(const sigset_t * mask)
 {
@@ -22,8 +24,8 @@ int __libc_sigsuspend(const sigset_t * mask)
 }
 #else
 # define __NR___syscall_sigsuspend __NR_sigsuspend
-static inline _syscall3(int, __syscall_sigsuspend, int, a, unsigned long int, b,
-		  unsigned long int, c);
+static __inline__ _syscall3(int, __syscall_sigsuspend, int, a, unsigned long int, b,
+		  unsigned long int, c)
 
 int __libc_sigsuspend(const sigset_t * set)
 {
@@ -33,3 +35,4 @@ int __libc_sigsuspend(const sigset_t * set)
 libc_hidden_proto(sigsuspend)
 weak_alias(__libc_sigsuspend,sigsuspend)
 libc_hidden_weak(sigsuspend)
+#endif

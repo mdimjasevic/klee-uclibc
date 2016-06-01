@@ -19,16 +19,17 @@
 
 #include <sys/syscall.h>
 #include <sys/poll.h>
+#include <bits/kernel-features.h>
 
 extern __typeof(poll) __libc_poll;
 
-#ifdef __NR_poll
+#if defined __ASSUME_POLL_SYSCALL && defined __NR_poll
 
 # define __NR___libc_poll __NR_poll
 _syscall3(int, __libc_poll, struct pollfd *, fds,
-	unsigned long int, nfds, int, timeout);
+	unsigned long int, nfds, int, timeout)
 
-#elif defined(__NR_ppoll)
+#elif defined(__NR_ppoll) && defined __UCLIBC_LINUX_SPECIFIC__
 
 libc_hidden_proto(ppoll)
 int __libc_poll(struct pollfd *fds, nfds_t nfds, int timeout)
@@ -57,8 +58,8 @@ int __libc_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 #include <sys/param.h>
 #include <unistd.h>
 
-libc_hidden_proto(memcpy)
-libc_hidden_proto(memset)
+/* Experimentally off - libc_hidden_proto(memcpy) */
+/* Experimentally off - libc_hidden_proto(memset) */
 libc_hidden_proto(getdtablesize)
 libc_hidden_proto(select)
 

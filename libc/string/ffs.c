@@ -8,9 +8,8 @@
 /* ffsl,ffsll */
 
 #include "_string.h"
-#include <strings.h>
 
-libc_hidden_proto(ffs)
+/* Experimentally off - libc_hidden_proto(ffs) */
 
 int ffs(int i)
 {
@@ -49,7 +48,7 @@ int ffs(int i)
 	for (n = 0 ; i ; ++n) {
 		i >>= 1;
 	}
-	
+
 	return n;
 #endif
 }

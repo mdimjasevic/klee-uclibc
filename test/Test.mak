@@ -30,10 +30,11 @@ endif
 ifeq ($(UCLIBC_ONLY),)
 TARGETS   += $(G_TARGETS)
 endif
+
 CLEAN_TARGETS := $(U_TARGETS) $(G_TARGETS)
 COMPILE_TARGETS :=  $(TARGETS)
-TARGETS += $(SHELL_TESTS)
 RUN_TARGETS := $(patsubst %,%.exe,$(TARGETS))
+TARGETS += $(SHELL_TESTS)
 
 define binary_name
 $(patsubst %.exe,%,$@)
@@ -58,14 +59,12 @@ define exec_test
 	$(showtest)
 	$(Q)\
 	$(WRAPPER) $(WRAPPER_$(patsubst %_glibc,%,$(binary_name))) \
-	./$(binary_name) $(OPTS) $(OPTS_$(patsubst %_glibc,%,$(binary_name))) &> "$(binary_name).out" ; \
+	./$(binary_name) $(OPTS) $(OPTS_$(patsubst %_glibc,%,$(binary_name))) > "$(binary_name).out" 2>&1 ; \
 		ret=$$? ; \
 		expected_ret="$(RET_$(patsubst %_glibc,%,$(binary_name)))" ; \
 		test -z "$$expected_ret" && export expected_ret=0 ; \
 	if ! test $$ret -eq $$expected_ret ; then \
-		$(RM) $(binary_name) ; \
 		echo "ret == $$ret ; expected_ret == $$expected_ret" ; \
-		cat "$(binary_name).out" ; \
 		exit 1 ; \
 	fi
 	$(SCAT) "$(binary_name).out"
@@ -73,13 +72,12 @@ endef
 
 test check all: run
 run: $(RUN_TARGETS) compile
+
 $(RUN_TARGETS): $(TARGETS)
-ifeq ($(shell echo "$(SHELL_TESTS)"|grep "$(binary_name)"),)
 	$(exec_test)
 	$(diff_test)
 ifeq ($(UCLIBC_ONLY),)
 	$(uclibc_glibc_diff_test)
-endif
 endif
 
 compile: $(COMPILE_TARGETS)
@@ -114,5 +112,6 @@ shell_%:
 clean:
 	$(showclean)
 	$(Q)$(RM) *.a *.o *.so *~ core *.out *.gdb $(CLEAN_TARGETS) $(EXTRA_CLEAN)
+	$(Q)$(RM_R) $(EXTRA_DIRS)
 
 .PHONY: all check clean test run compile

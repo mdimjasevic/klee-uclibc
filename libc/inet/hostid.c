@@ -15,14 +15,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 libc_hidden_proto(open)
 libc_hidden_proto(close)
 libc_hidden_proto(read)
 libc_hidden_proto(write)
 libc_hidden_proto(getuid)
 libc_hidden_proto(geteuid)
-libc_hidden_proto(gethostbyname)
+libc_hidden_proto(gethostbyname_r)
 libc_hidden_proto(gethostname)
 
 #define HOSTID "/etc/hostid"
@@ -47,7 +47,7 @@ long int gethostid(void)
 	char host[MAXHOSTNAMELEN + 1];
 	int fd, id;
 
-	/* If hostid was already set the we can return that value.
+	/* If hostid was already set then we can return that value.
 	 * It is not an error if we cannot read this file. It is not even an
 	 * error if we cannot read all the bytes, we just carry on trying...
 	 */

@@ -12,8 +12,8 @@
 #include <sys/syscall.h>
 
 #define __NR___syscall_sched_setparam __NR_sched_setparam
-static inline _syscall2(int, __syscall_sched_setparam,
-		__kernel_pid_t, pid, const struct sched_param *, p);
+static __inline__ _syscall2(int, __syscall_sched_setparam,
+		__kernel_pid_t, pid, const struct sched_param *, p)
 
 int sched_setparam(pid_t pid, const struct sched_param *p)
 {

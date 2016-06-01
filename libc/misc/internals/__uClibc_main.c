@@ -22,7 +22,6 @@
 #include <link.h>
 #include <bits/uClibc_page.h>
 #include <paths.h>
-#include <unistd.h>
 #include <asm/errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -31,10 +30,10 @@
 libc_hidden_proto(exit)
 
 #ifdef __UCLIBC_HAS_PROGRAM_INVOCATION_NAME__
-libc_hidden_proto(strrchr)
+/* Experimentally off - libc_hidden_proto(strrchr) */
 #endif
 #ifndef __ARCH_HAS_NO_LDSO__
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(memcpy) */
 libc_hidden_proto(getgid)
 libc_hidden_proto(getuid)
 libc_hidden_proto(getegid)
@@ -73,6 +72,11 @@ uintptr_t __guard attribute_relro;
 #  endif
 # endif
 
+/*
+ * Needed to initialize _dl_phdr when statically linked
+ */
+
+void internal_function _dl_aux_init (ElfW(auxv_t) *av);
 #endif /* !SHARED */
 
 /* This is a DISGUSTING HACK */
@@ -118,9 +122,8 @@ weak_alias (program_invocation_name, __progname_full)
 #endif
 
 /*
- * Declare the __environ global variable and create a strong alias environ.
- * Note: Apparently we must initialize __environ to ensure that the strong
- * environ symbol is also included.
+ * Declare the __environ global variable and create a weak alias environ.
+ * This must be initialized; we cannot have a weak alias into bss.
  */
 char **__environ = 0;
 weak_alias(__environ, environ)
@@ -136,16 +139,14 @@ size_t __pagesize = 0;
 static void __check_one_fd(int fd, int mode)
 {
     /* Check if the specified fd is already open */
-    if (unlikely(__libc_fcntl(fd, F_GETFD)==-1 && *(__errno_location())==EBADF))
+    if (__libc_fcntl(fd, F_GETFD) == -1)
     {
 	/* The descriptor is probably not open, so try to use /dev/null */
-	struct stat st;
 	int nullfd = __libc_open(_PATH_DEVNULL, mode);
 	/* /dev/null is major=1 minor=3.  Make absolutely certain
 	 * that is in fact the device that we have opened and not
 	 * some other wierd file... */
-	if ( (nullfd!=fd) || fstat(fd, &st) || !S_ISCHR(st.st_mode) ||
-		(st.st_rdev != makedev(1, 3)))
+	if (nullfd!=fd)
 	{
 		abort();
 	}
@@ -159,13 +160,13 @@ static int __check_suid(void)
 
     uid  = getuid();
     euid = geteuid();
+    if (uid != euid)
+	return 1;
     gid  = getgid();
     egid = getegid();
-
-    if(uid == euid && gid == egid) {
-	return 0;
-    }
-    return 1;
+    if (gid != egid)
+	return 1;
+    return 0; /* we are not suid */
 }
 #endif
 
@@ -186,7 +187,7 @@ extern void __uClibc_init(void);
 libc_hidden_proto(__uClibc_init)
 void __uClibc_init(void)
 {
-    static int been_there_done_that = 0;
+    static smallint been_there_done_that;
 
     if (been_there_done_that)
 	return;
@@ -315,6 +316,12 @@ void __uClibc_main(int (*main)(int, char **, char **), int argc,
 	}
 	aux_dat += 2;
     }
+#ifndef SHARED
+    /* Get the program headers (_dl_phdr) from the aux vector
+       It will be used into __libc_setup_tls. */
+
+    _dl_aux_init (auxvt);
+#endif
 #endif
 
     /* We need to initialize uClibc.  If we are dynamically linked this
@@ -341,12 +348,14 @@ void __uClibc_main(int (*main)(int, char **, char **), int argc,
 
     __uclibc_progname = *argv;
 #ifdef __UCLIBC_HAS_PROGRAM_INVOCATION_NAME__
-    program_invocation_name = *argv;
-    program_invocation_short_name = strrchr(*argv, '/');
-    if (program_invocation_short_name != NULL)
-	++program_invocation_short_name;
-    else
-	program_invocation_short_name = program_invocation_name;
+    if (*argv != NULL) {
+	program_invocation_name = *argv;
+	program_invocation_short_name = strrchr(*argv, '/');
+	if (program_invocation_short_name != NULL)
+	    ++program_invocation_short_name;
+	else
+	    program_invocation_short_name = program_invocation_name;
+    }
 #endif
 
 #ifdef __UCLIBC_CTOR_DTOR__

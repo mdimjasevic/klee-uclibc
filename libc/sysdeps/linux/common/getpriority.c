@@ -13,8 +13,8 @@
 libc_hidden_proto(getpriority)
 
 #define __NR___syscall_getpriority __NR_getpriority
-static inline _syscall2(int, __syscall_getpriority,
-		__priority_which_t, which, id_t, who);
+static __inline__ _syscall2(int, __syscall_getpriority,
+		__priority_which_t, which, id_t, who)
 
 /* The return value of __syscall_getpriority is biased by this value
  * to avoid returning negative values.  */

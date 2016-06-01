@@ -1,4 +1,4 @@
-/* Any assmbly language/system dependent hacks needed to setup boot1.c so it
+/* Any assembly language/system dependent hacks needed to setup boot1.c so it
  * will work as expected and cope with whatever platform specific wierdness is
  * needed for this architecture.
  * Copyright (C) 2005 by Joakim Tjernlund
@@ -7,7 +7,7 @@
 
 
 #include <sgidefs.h>
-asm(""
+__asm__(""
     "	.text\n"
     "	.globl	_start\n"
     "	.ent	_start\n"

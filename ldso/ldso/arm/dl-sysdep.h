@@ -1,6 +1,6 @@
 /* vi: set sw=4 ts=4: */
 /*
- * Various assmbly language/system dependent  hacks that are required
+ * Various assembly language/system dependent hacks that are required
  * so that we can minimize the amount of platform specific code.
  * Copyright (C) 2000-2004 by Erik Andersen <andersen@codepoet.org>
  */
@@ -15,7 +15,7 @@
   GOT_BASE[1] = (unsigned long) MODULE; \
 }
 
-static inline unsigned long arm_modulus(unsigned long m, unsigned long p)
+static __always_inline unsigned long arm_modulus(unsigned long m, unsigned long p)
 {
 	unsigned long i,t,inc;
 	i=p; t=0;
@@ -55,11 +55,6 @@ static inline unsigned long arm_modulus(unsigned long m, unsigned long p)
 struct elf_resolve;
 unsigned long _dl_linux_resolver(struct elf_resolve * tpnt, int reloc_entry);
 
-/* 4096 bytes alignment */
-#define PAGE_ALIGN 0xfffff000
-#define ADDR_ALIGN 0xfff
-#define OFFS_ALIGN 0x7ffff000
-
 /* ELF_RTYPE_CLASS_PLT iff TYPE describes relocation of a PLT entry, so
    PLT entries should not be allowed to define the value.
    ELF_RTYPE_CLASS_NOCOPY iff TYPE should not be allowed to resolve to one
@@ -72,19 +67,19 @@ unsigned long _dl_linux_resolver(struct elf_resolve * tpnt, int reloc_entry);
    first element of the GOT.  We used to use the PIC register to do this
    without a constant pool reference, but GCC 4.2 will use a pseudo-register
    for the PIC base, so it may not be in r10.  */
-static inline Elf32_Addr __attribute__ ((unused))
+static __always_inline Elf32_Addr __attribute__ ((unused))
 elf_machine_dynamic (void)
 {
   Elf32_Addr dynamic;
 #if !defined __thumb__
-  asm ("ldr %0, 2f\n"
+  __asm__ ("ldr %0, 2f\n"
        "1: ldr %0, [pc, %0]\n"
        "b 3f\n"
        "2: .word _GLOBAL_OFFSET_TABLE_ - (1b+8)\n"
        "3:" : "=r" (dynamic));
 #else
   int tmp;
-  asm (".align 2\n"
+  __asm__ (".align 2\n"
        "bx     pc\n"
        "nop\n"
        ".arm\n"
@@ -104,19 +99,19 @@ elf_machine_dynamic (void)
 }
 
 /* Return the run-time load address of the shared object.  */
-static inline Elf32_Addr __attribute__ ((unused))
+static __always_inline Elf32_Addr __attribute__ ((unused))
 elf_machine_load_address (void)
 {
-	extern void __dl_start asm ("_dl_start");
+	extern void __dl_start __asm__ ("_dl_start");
 	Elf32_Addr got_addr = (Elf32_Addr) &__dl_start;
 	Elf32_Addr pcrel_addr;
 #if defined __OPTIMIZE__ && !defined __thumb__
-	asm ("adr %0, _dl_start" : "=r" (pcrel_addr));
+	__asm__ ("adr %0, _dl_start" : "=r" (pcrel_addr));
 #else
 	/* A simple adr does not work in Thumb mode because the offset is
 	   negative, and for debug builds may be too large.  */
 	int tmp;
-	asm ("adr %1, 1f\n\t"
+	__asm__ ("adr %1, 1f\n\t"
 		 "ldr %0, [%1]\n\t"
 		 "add %0, %0, %1\n\t"
 		 "b 2f\n\t"
@@ -128,7 +123,7 @@ elf_machine_load_address (void)
 	return pcrel_addr - got_addr;
 }
 
-static inline void
+static __always_inline void
 elf_machine_relative (Elf32_Addr load_off, const Elf32_Addr rel_addr,
 		      Elf32_Word relative_count)
 {
@@ -140,3 +135,7 @@ elf_machine_relative (Elf32_Addr load_off, const Elf32_Addr rel_addr,
 		*reloc_addr += load_off;
 	} while (--relative_count);
 }
+
+#ifdef __ARM_EABI__
+#define DL_MALLOC_ALIGN 8	/* EABI needs 8 byte alignment for STRD LDRD */
+#endif

@@ -21,7 +21,6 @@ static char rcsid[] = "$NetBSD: w_sinh.c,v 1.6 1995/05/10 20:49:51 jtc Exp $";
 #include "math.h"
 #include "math_private.h"
 
-libm_hidden_proto(sinh)
 #ifdef __STDC__
 	double sinh(double x)		/* wrapper sinh */
 #else
@@ -35,7 +34,7 @@ libm_hidden_proto(sinh)
 	double z;
 	z = __ieee754_sinh(x);
 	if(_LIB_VERSION == _IEEE_) return z;
-	if(!finite(z)&&finite(x)) {
+	if(!isfinite(z)&&isfinite(x)) {
 	    return __kernel_standard(x,x,25); /* sinh overflow */
 	} else
 	    return z;

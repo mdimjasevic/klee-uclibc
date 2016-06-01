@@ -45,7 +45,6 @@ extern int _dl_linux_resolve(void);
 
 unsigned long _dl_linux_resolver(struct elf_resolve *tpnt, int reloc_entry)
 {
-	int reloc_type;
 	ELF_RELOC *this_reloc;
 	char *strtab;
 	Elf32_Sym *symtab;
@@ -59,18 +58,11 @@ unsigned long _dl_linux_resolver(struct elf_resolve *tpnt, int reloc_entry)
 	rel_addr = (char *)tpnt->dynamic_info[DT_JMPREL];
 
 	this_reloc = (ELF_RELOC *)(intptr_t)(rel_addr + reloc_entry);
-	reloc_type = ELF32_R_TYPE(this_reloc->r_info);
 	symtab_index = ELF32_R_SYM(this_reloc->r_info);
 
 	symtab = (Elf32_Sym *)(intptr_t) tpnt->dynamic_info[DT_SYMTAB];
 	strtab = (char *)tpnt->dynamic_info[DT_STRTAB];
 	symname = strtab + symtab[symtab_index].st_name;
-
-	if (unlikely(reloc_type != R_SH_JMP_SLOT)) {
-		_dl_dprintf(2, "%s: Incorrect relocation type in jump relocations\n",
-		            _dl_progname);
-		_dl_exit(1);
-	}
 
 	/* Address of jump instruction to fix up */
 	instr_addr = (unsigned long) (this_reloc->r_offset + tpnt->loadaddr);
@@ -185,7 +177,12 @@ _dl_do_reloc (struct elf_resolve *tpnt,struct dyn_elf *scope,
 		if (!symbol_addr && ELF32_ST_BIND(symtab[symtab_index].st_info) != STB_WEAK) {
 			_dl_dprintf(2, "%s: can't resolve symbol '%s'\n",
 			            _dl_progname, strtab + symtab[symtab_index].st_name);
-			_dl_exit (1);
+
+			/*
+			 * The caller should handle the error: undefined reference to weak symbols
+			 * are not fatal.
+			 */
+			return 1;
 		}
 	}
 
@@ -219,11 +216,12 @@ _dl_do_reloc (struct elf_resolve *tpnt,struct dyn_elf *scope,
 			*reloc_addr = (unsigned long) tpnt->loadaddr + rpnt->r_addend;
 			break;
 		default:
-			return -1; /*call _dl_exit(1) */
+
+			return -1;
 	}
 #if defined (__SUPPORT_LD_DEBUG__)
 	    if (_dl_debug_reloc && _dl_debug_detail)
-		_dl_dprintf(_dl_debug_file, "\tpatched: %x ==> %x @ %x", old_val, *reloc_addr, reloc_addr);
+		_dl_dprintf(_dl_debug_file, "\tpatched: %x ==> %x @ %x\n", old_val, *reloc_addr, reloc_addr);
 #endif
 
 	return 0;
@@ -256,11 +254,11 @@ _dl_do_lazy_reloc (struct elf_resolve *tpnt, struct dyn_elf *scope,
 			*reloc_addr += (unsigned long) tpnt->loadaddr;
 			break;
 		default:
-			return -1; /*call _dl_exit(1) */
+			return -1;
 	}
 #if defined (__SUPPORT_LD_DEBUG__)
 	if (_dl_debug_reloc && _dl_debug_detail)
-		_dl_dprintf(_dl_debug_file, "\tpatched: %x ==> %x @ %x", old_val, *reloc_addr, reloc_addr);
+		_dl_dprintf(_dl_debug_file, "\tpatched: %x ==> %x @ %x\n", old_val, *reloc_addr, reloc_addr);
 #endif
 	return 0;
 

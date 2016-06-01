@@ -1,7 +1,7 @@
 /*
  * This file based on printf.c from 'Dlibs' on the atari ST  (RdeBath)
  *
- * 
+ *
  *    Dale Schumacher                         399 Beacon Ave.
  *    (alias: Dalnefre')                      St. Paul, MN  55104
  *    dal@syntel.UUCP                         United States of America
@@ -72,7 +72,7 @@
  * Fixed precision bug -- when negative set to default.
  * Added function fnprintf to support __dtostr.
  * Added floating point support for doubles.  Yeah!
- * 
+ *
  *
  * May 2001     Fixes from Johan Adolfsson (johan.adolfsson@axis.com)
  *    1) printf("%c",0) returned 0 instead of 1.
@@ -137,17 +137,15 @@
 #include <errno.h>
 #include <ctype.h>
 #include <bits/uClibc_uintmaxtostr.h>
-
-#define __PRINTF_INFO_NO_BITFIELD
 #include <printf.h>
 
 #ifdef __UCLIBC_HAS_THREADS__
 #include <pthread.h>
 #endif /* __UCLIBC_HAS_THREADS__ */
 
-libc_hidden_proto(strlen)
-libc_hidden_proto(strnlen)
-libc_hidden_proto(memcpy)
+/* Experimentally off - libc_hidden_proto(strlen) */
+/* Experimentally off - libc_hidden_proto(strnlen) */
+/* Experimentally off - libc_hidden_proto(memcpy) */
 libc_hidden_proto(putc_unlocked)
 libc_hidden_proto(__fputc_unlocked)
 libc_hidden_proto(__glibc_strerror_r)
@@ -359,13 +357,13 @@ int vfprintf(FILE * __restrict op, register const char * __restrict fmt,
 		int i;
 	} intarg;
 	int i, cnt, dataargtype, len;
-	const void *argptr;			/* This does not need to be initialized. */
+	const void *argptr = argptr; /* ok to be initialized. */
 	register char *p;
 	const char *fmt0;
 	int preci, width;
 #define upcase i
 	int radix, dpoint /*, upcase*/;
-	char tmp[65];				/* TODO - determing needed size from headers */
+	char tmp[65];		/* TODO - determine needed size from headers */
 	char flag[sizeof(spec)];
 	__STDIO_AUTO_THREADLOCK_VAR;
 
@@ -403,7 +401,7 @@ int vfprintf(FILE * __restrict op, register const char * __restrict fmt,
 					p++;
 				}
 			}
-			
+
 			if (!flag[FLAG_PLUS]) {
 				flag[FLAG_PLUS] = flag[FLAG_SPACE];
 			}
@@ -586,14 +584,14 @@ int vfprintf(FILE * __restrict op, register const char * __restrict fmt,
 						PRINT_INFO_SET_FLAG(&info,left);
 					}
 #if 1
-					cnt += _fpmaxtostr(op, 
+					cnt += _fpmaxtostr(op,
 									   (__fpmax_t)
 									   ((dataargtype == (8 << 8))
 										? va_arg(ap, long double)
 										: (long double) va_arg(ap, double)),
 									   &info, _fp_out_narrow);
 #else
-					cnt += _fpmaxtostr(op, 
+					cnt += _fpmaxtostr(op,
 									   (__fpmax_t)
 									   ((lval > 1)
 										? va_arg(ap, long double)
@@ -660,7 +658,7 @@ int vfprintf(FILE * __restrict op, register const char * __restrict fmt,
 						preci = 0;
 						if (!flag[FLAG_MINUS_LJUSTIFY]
 							/* && flag[FLAG_PLUS] */
-							&& (flag[FLAG_0_PAD] == '0')) { 
+							&& (flag[FLAG_0_PAD] == '0')) {
 							preci = width;
 							width = 0;
 						}

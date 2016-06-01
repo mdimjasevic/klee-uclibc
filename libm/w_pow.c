@@ -19,7 +19,6 @@
 #include "math.h"
 #include "math_private.h"
 
-libm_hidden_proto(pow)
 #ifdef __STDC__
 	double pow(double x, double y)	/* wrapper pow */
 #else
@@ -42,19 +41,19 @@ libm_hidden_proto(pow)
 	if(x==0.0){
 	    if(y==0.0)
 	        return __kernel_standard(x,y,20); /* pow(0.0,0.0) */
-	    if(finite(y)&&y<0.0)
+	    if(isfinite(y)&&y<0.0)
 	        return __kernel_standard(x,y,23); /* pow(0.0,negative) */
 	    return z;
 	}
-	if(!finite(z)) {
-	    if(finite(x)&&finite(y)) {
+	if(!isfinite(z)) {
+	    if(isfinite(x)&&isfinite(y)) {
 	        if(isnan(z))
 	            return __kernel_standard(x,y,24); /* pow neg**non-int */
 	        else
 	            return __kernel_standard(x,y,21); /* pow overflow */
 	    }
 	}
-	if(z==0.0&&finite(x)&&finite(y))
+	if(z==0.0&&isfinite(x)&&isfinite(y))
 	    return __kernel_standard(x,y,22); /* pow underflow */
 	return z;
 #endif

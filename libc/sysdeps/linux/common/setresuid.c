@@ -8,21 +8,24 @@
  */
 
 #include <sys/syscall.h>
-#ifdef __USE_GNU
+#if defined __USE_GNU && defined __UCLIBC_LINUX_SPECIFIC__
 #include <unistd.h>
-
-libc_hidden_proto(setresuid)
 
 #if defined(__NR_setresuid32)
 # undef __NR_setresuid
 # define __NR_setresuid __NR_setresuid32
+
+libc_hidden_proto(setresuid)
 _syscall3(int, setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)
+libc_hidden_def(setresuid)
 
 #elif defined(__NR_setresuid)
-# define __NR___syscall_setresuid __NR_setresuid
-static inline _syscall3(int, __syscall_setresuid,
-		__kernel_uid_t, rgid, __kernel_uid_t, egid, __kernel_uid_t, sgid);
 
+# define __NR___syscall_setresuid __NR_setresuid
+static __inline__ _syscall3(int, __syscall_setresuid,
+		__kernel_uid_t, rgid, __kernel_uid_t, egid, __kernel_uid_t, sgid)
+
+libc_hidden_proto(setresuid)
 int setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
 	if (((ruid + 1) > (uid_t) ((__kernel_uid_t) - 1U))
@@ -33,7 +36,8 @@ int setresuid(uid_t ruid, uid_t euid, uid_t suid)
 	}
 	return (__syscall_setresuid(ruid, euid, suid));
 }
+libc_hidden_def(setresuid)
+
 #endif
 
-libc_hidden_def(setresuid)
 #endif

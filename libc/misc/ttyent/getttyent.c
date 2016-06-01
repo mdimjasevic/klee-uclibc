@@ -38,9 +38,9 @@
 #include <pthread.h>
 #endif
 
-libc_hidden_proto(strchr)
-libc_hidden_proto(strcmp)
-libc_hidden_proto(strncmp)
+/* Experimentally off - libc_hidden_proto(strchr) */
+/* Experimentally off - libc_hidden_proto(strcmp) */
+/* Experimentally off - libc_hidden_proto(strncmp) */
 libc_hidden_proto(__fsetlocking)
 libc_hidden_proto(rewind)
 libc_hidden_proto(fgets_unlocked)
@@ -51,7 +51,7 @@ libc_hidden_proto(fclose)
 libc_hidden_proto(abort)
 #ifdef __UCLIBC_HAS_XLOCALE__
 libc_hidden_proto(__ctype_b_loc)
-#elif __UCLIBC_HAS_CTYPE_TABLES__
+#elif defined __UCLIBC_HAS_CTYPE_TABLES__
 libc_hidden_proto(__ctype_b)
 #endif
 
@@ -60,7 +60,7 @@ static FILE *tf;
 static struct ttyent tty;
 
 
-/* Skip over the current field, removing quotes, and return 
+/* Skip over the current field, removing quotes, and return
  * a pointer to the next field.
  */
 #define	QUOTED	1

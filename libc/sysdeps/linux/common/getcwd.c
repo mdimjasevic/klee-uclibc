@@ -18,10 +18,10 @@
 libc_hidden_proto(getcwd)
 libc_hidden_proto(getpagesize)
 
-libc_hidden_proto(strcat)
-libc_hidden_proto(strcpy)
-libc_hidden_proto(strncpy)
-libc_hidden_proto(strlen)
+/* Experimentally off - libc_hidden_proto(strcat) */
+/* Experimentally off - libc_hidden_proto(strcpy) */
+/* Experimentally off - libc_hidden_proto(strncpy) */
+/* Experimentally off - libc_hidden_proto(strlen) */
 libc_hidden_proto(opendir)
 libc_hidden_proto(readdir)
 libc_hidden_proto(closedir)
@@ -30,8 +30,8 @@ libc_hidden_proto(stat)
 #ifdef __NR_getcwd
 
 # define __NR___syscall_getcwd __NR_getcwd
-static inline
-_syscall2(int, __syscall_getcwd, char *, buf, unsigned long, size);
+static __always_inline
+_syscall2(int, __syscall_getcwd, char *, buf, unsigned long, size)
 
 #else
 
@@ -144,7 +144,7 @@ oops:
 	return 0;
 }
 
-static inline
+static __always_inline
 int __syscall_getcwd(char * buf, unsigned long size)
 {
     int len;
@@ -165,7 +165,7 @@ int __syscall_getcwd(char * buf, unsigned long size)
 
     cwd = recurser(buf, size, st.st_dev, st.st_ino);
     if (cwd) {
-	len = strlen(buf);
+	len = strlen(buf) + 1;
 	__set_errno(olderrno);
     }
     return len;

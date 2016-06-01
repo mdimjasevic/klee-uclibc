@@ -17,33 +17,36 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
+#include <signal.h>
 #include <sys/syscall.h>
 #include <sys/poll.h>
 
-#ifdef __NR_ppoll
+#if defined __NR_ppoll && defined __UCLIBC_LINUX_SPECIFIC__
 
 libc_hidden_proto(ppoll)
 
 # define __NR___libc_ppoll __NR_ppoll
-static inline
-_syscall4(int, __libc_ppoll, struct pollfd *, fds,
-	nfds_t, nfds, const struct timespec *, timeout,
-	const __sigset_t *, sigmask);
+static __always_inline
+_syscall5(int, __libc_ppoll,
+	struct pollfd *, fds,
+	nfds_t, nfds,
+	const struct timespec *, timeout,
+	const __sigset_t *, sigmask,
+	size_t, sigsetsize)
 
 int
-ppoll (struct pollfd *fds, nfds_t nfds, const struct timespec *timeout,
+ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *timeout,
        const __sigset_t *sigmask)
 {
-  /* The Linux kernel can in some situations update the timeout value.
-     We do not want that so use a local variable.  */
-  struct timespec tval;
-  if (timeout != NULL)
-    {
-      tval = *timeout;
-      timeout = &tval;
-    }
+	/* The Linux kernel can in some situations update the timeout value.
+	   We do not want that so use a local variable.  */
+	struct timespec tval;
+	if (timeout != NULL) {
+		tval = *timeout;
+		timeout = &tval;
+	}
 
-  return __libc_ppoll(fds, nfds, timeout, sigmask);
+	return __libc_ppoll(fds, nfds, timeout, sigmask, _NSIG / 8);
 }
 libc_hidden_def(ppoll)
 
