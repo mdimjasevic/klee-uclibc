@@ -119,8 +119,6 @@ char got_path[];
 		while (*path != '\0' && *path != '/') {
 			if (new_path > max_path) {
 				__set_errno(ENAMETOOLONG);
- err:
-				free(allocated_path);
 				return NULL;
 			}
 			*new_path++ = *path++;
@@ -129,7 +127,7 @@ char got_path[];
 		/* Protect against infinite loops. */
 		if (readlinks++ > MAX_READLINKS) {
 			__set_errno(ELOOP);
-			goto err;
+			return NULL;
 		}
 		path_len = strlen(path);
 		/* See if last (so far) pathname component is a symlink. */
@@ -140,13 +138,13 @@ char got_path[];
 			if (link_len < 0) {
 				/* EINVAL means the file exists but isn't a symlink. */
 				if (errno != EINVAL) {
-					goto err;
+					return NULL;
 				}
 			} else {
 				/* Safe sex check. */
 				if (path_len + link_len >= PATH_MAX - 2) {
 					__set_errno(ENAMETOOLONG);
-					goto err;
+					return NULL;
 				}
 				/* Note: readlink doesn't add the null byte. */
 				/* copy_path[link_len] = '\0'; - we don't need it too */
